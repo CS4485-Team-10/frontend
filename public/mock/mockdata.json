@@ -1,0 +1,199 @@
+{
+  "executive_overview": {
+    "total_videos_scoped": 8421,
+    "active_narratives": 245,
+    "verified_claims": 1132,
+    "high_risk_alerts": 142,
+    "topic_trends": [
+      { "date": "2025-11-20", "AI": 120, "Health": 80, "Crypto": 200, "Nutrition": 45 },
+      { "date": "2025-12-01", "AI": 210, "Health": 145, "Crypto": 190, "Nutrition": 62 },
+      { "date": "2025-12-15", "AI": 350, "Health": 210, "Crypto": 180, "Nutrition": 88 },
+      { "date": "2026-01-01", "AI": 310, "Health": 180, "Crypto": 150, "Nutrition": 112 },
+      { "date": "2026-01-10", "AI": 280, "Health": 140, "Crypto": 90, "Nutrition": 135 },
+      { "date": "2026-01-25", "AI": 405, "Health": 225, "Crypto": 160, "Nutrition": 158 },
+      { "date": "2026-02-05", "AI": 480, "Health": 310, "Crypto": 210, "Nutrition": 194 },
+      { "date": "2026-02-19", "AI": 420, "Health": 390, "Crypto": 310, "Nutrition": 245 },
+      { "date": "2026-03-05", "AI": 560, "Health": 415, "Crypto": 280, "Nutrition": 310 },
+      { "date": "2026-03-20", "AI": 610, "Health": 490, "Crypto": 340, "Nutrition": 385 }
+    ],
+    "sentiment": { "positive": 42, "neutral": 35, "negative": 23 }
+  },
+  "narrative_discovery": [
+    {
+      "id": "nar-001",
+      "title": "Ozempic Weight Loss & Safety",
+      "risk_level": "High",
+      "risk_score": 8.2,
+      "videos_analyzed": 1247,
+      "total_views": "15.3M"
+    },
+    {
+      "id": "nar-002",
+      "title": "Wearable Tech & Disease Detection",
+      "risk_level": "Low",
+      "risk_score": 2.1,
+      "videos_analyzed": 567,
+      "total_views": "3.2M"
+    },
+    {
+      "id": "nar-003",
+      "title": "Natural Immune Boosters & COVID-19",
+      "risk_level": "Medium",
+      "risk_score": 5.4,
+      "videos_analyzed": 892,
+      "total_views": "8.7M"
+    },
+    {
+      "id": "nar-004",
+      "title": "Intermittent Fasting & Longevity",
+      "risk_level": "Low",
+      "risk_score": 1.8,
+      "videos_analyzed": 723,
+      "total_views": "5.9M"
+    },
+    {
+      "id": "nar-005",
+      "title": "Biohacking with Nootropics",
+      "risk_level": "Medium",
+      "risk_score": 4.7,
+      "videos_analyzed": 312,
+      "total_views": "2.1M"
+    },
+    {
+      "id": "nar-006",
+      "title": "Microplastics in Personal Care Products",
+      "risk_level": "Medium",
+      "risk_score": 5.9,
+      "videos_analyzed": 445,
+      "total_views": "4.6M"
+    },
+    {
+      "id": "nar-007",
+      "title": "AI-Driven Personalized Nutrition",
+      "risk_level": "Low",
+      "risk_score": 1.5,
+      "videos_analyzed": 1102,
+      "total_views": "12.8M"
+    },
+    {
+      "id": "nar-008",
+      "title": "The Rise of Longevity Supplements (NMN/Resveratrol)",
+      "risk_level": "High",
+      "risk_score": 7.6,
+      "videos_analyzed": 678,
+      "total_views": "9.2M"
+    }
+  ],
+  "claim_validation": [
+    {
+      "claim_id": "CLM-8472",
+      "text": "Ozempic causes permanent weight loss without dietary changes.",
+      "source": "@health_insights",
+      "status": "Disputed",
+      "confidence": "94%",
+      "views": "2.4M"
+    },
+    {
+      "claim_id": "CLM-8473",
+      "text": "Vitamin D supplements prevent 100% of COVID-19 infections.",
+      "source": "@wellness_daily",
+      "status": "Disputed",
+      "confidence": "87%",
+      "views": "1.2M"
+    },
+    {
+      "claim_id": "CLM-8474",
+      "text": "Cold plunge therapy boosts metabolic rate by 300%.",
+      "source": "@fit_science",
+      "status": "Unverified",
+      "confidence": "82%",
+      "views": "980K"
+    },
+    {
+      "claim_id": "CLM-8475",
+      "text": "Sleep tracking data can predict early-stage Alzheimer's.",
+      "source": "@neuro_tech",
+      "status": "Verified",
+      "confidence": "91%",
+      "views": "1.5M"
+    },
+    {
+      "claim_id": "CLM-8476",
+      "text": "Magnesium supplements cure chronic anxiety in 24 hours.",
+      "source": "@natural_heal",
+      "status": "Disputed",
+      "confidence": "76%",
+      "views": "450K"
+    },
+    {
+      "claim_id": "CLM-8477",
+      "text": "Continuous Glucose Monitors help non-diabetics lose weight faster.",
+      "source": "@metabolic_pro",
+      "status": "Verified",
+      "confidence": "88%",
+      "views": "2.1M"
+    },
+    {
+      "claim_id": "CLM-8478",
+      "text": "Drinking charcoal water detoxifies the liver instantly.",
+      "source": "@cleanse_queen",
+      "status": "Disputed",
+      "confidence": "96%",
+      "views": "1.8M"
+    },
+    {
+      "claim_id": "CLM-8479",
+      "text": "Regular sauna use reduces cardiovascular mortality by 40%.",
+      "source": "@longevity_lab",
+      "status": "Verified",
+      "confidence": "84%",
+      "views": "3.4M"
+    },
+    {
+      "claim_id": "CLM-8480",
+      "text": "Blue light blocking glasses prevent permanent retina damage.",
+      "source": "@eye_care_tech",
+      "status": "Unverified",
+      "confidence": "72%",
+      "views": "600K"
+    }
+  ],
+  "creator_risk_monitor": [
+    {
+      "handle": "@health_guru_247",
+      "risk_score": 9.1,
+      "flagged_claims": 12,
+      "reach": "2.3M"
+    },
+    {
+      "handle": "@pure_wellness_life",
+      "risk_score": 7.4,
+      "flagged_claims": 8,
+      "reach": "1.8M"
+    },
+    {
+      "handle": "@ancient_remedy_hub",
+      "risk_score": 8.8,
+      "flagged_claims": 15,
+      "reach": "950K"
+    },
+    {
+      "handle": "@biohack_extreme",
+      "risk_score": 9.5,
+      "flagged_claims": 22,
+      "reach": "3.1M"
+    },
+    {
+      "handle": "@science_based_fit",
+      "risk_score": 1.2,
+      "flagged_claims": 0,
+      "reach": "5.6M"
+    },
+    {
+      "handle": "@supplement_insider",
+      "risk_score": 6.8,
+      "flagged_claims": 5,
+      "reach": "1.2M"
+    }
+  ]
+}
