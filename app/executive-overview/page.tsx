@@ -135,7 +135,7 @@ function SimpleBubbleChart() {
   );
 }
 
-export function ExecutiveOverviewPage() {
+export default function ExecutiveOverviewPage() {
   const data = mock.executive_overview as ExecutiveOverview;
 
   const overviewMetrics: OverviewMetricCard[] = [
