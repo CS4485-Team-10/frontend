@@ -1,9 +1,19 @@
 {
   "executive_overview": {
-    "total_videos_scoped": 8421,
+    "total_videos_scoped": 8333,
     "active_narratives": 245,
     "verified_claims": 1132,
     "high_risk_alerts": 142,
+    "overview_metrics_meta": {
+      "total_videos_scoped": { "delta_pct": 12, "delta_period_label": "vs last month" },
+      "active_narratives": { "delta_new": 8, "delta_period_label": "new" },
+      "verified_claims": { "accuracy_pct": 87, "accuracy_label": "accuracy" },
+      "high_risk_alerts": { "status_label": "Requires review" }
+    },
+    "topic_trends_meta": {
+      "window_days": 90,
+      "confidence_score_pct": 92
+    },
     "topic_trends": [
       { "date": "2025-11-20", "AI": 120, "Health": 80, "Crypto": 200, "Nutrition": 45 },
       { "date": "2025-12-01", "AI": 210, "Health": 145, "Crypto": 190, "Nutrition": 62 },
