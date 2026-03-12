@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import mock from "@/public/mock/mockdata.json";
+import { apiFetch } from "@/lib/api";
 
 function formatNumber(value: number) {
   return Intl.NumberFormat("en-US").format(value);
@@ -21,7 +23,14 @@ type OverviewMetricCard = {
   icon: "video" | "narratives" | "claims" | "alerts";
 };
 
-type ExecutiveOverview = typeof mock.executive_overview;
+type OverviewStatsResponse = {
+  ok: boolean;
+  total_videos_scoped: number;
+  active_narratives: number;
+  total_claims: number;
+  verified_claims: number | null;
+  high_risk_alerts: number | null;
+};
 
 const metricLinks: Partial<Record<MetricKey, string>> = {
   active_narratives: "/narrative-discovery",
@@ -136,41 +145,68 @@ function SimpleBubbleChart() {
 }
 
 export default function ExecutiveOverviewPage() {
-  const data = mock.executive_overview as ExecutiveOverview;
+  const mockData = mock.executive_overview;
+  const meta = mockData.overview_metrics_meta;
+
+  const [stats, setStats] = useState<OverviewStatsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiFetch<OverviewStatsResponse>("/overview/stats")
+      .then(setStats)
+      .catch(() => {}) // fall back to mock on error
+      .finally(() => setLoading(false));
+  }, []);
+
+  const totalVideos = stats?.total_videos_scoped ?? mockData.total_videos_scoped;
+  const activeNarratives = stats?.active_narratives ?? mockData.active_narratives;
+  const claimsValue = stats
+    ? (stats.verified_claims ?? stats.total_claims)
+    : mockData.verified_claims;
+  const claimsTitle = stats && stats.verified_claims == null ? "Total Claims" : "Verified Claims";
+  const highRiskAlerts = stats?.high_risk_alerts ?? mockData.high_risk_alerts;
 
   const overviewMetrics: OverviewMetricCard[] = [
     {
       key: "total_videos_scoped",
       title: "Total Videos Scoped",
-      value: data.total_videos_scoped,
-      subLabel: `+${data.overview_metrics_meta.total_videos_scoped.delta_pct}% ${data.overview_metrics_meta.total_videos_scoped.delta_period_label}`,
+      value: totalVideos,
+      subLabel: `+${meta.total_videos_scoped.delta_pct}% ${meta.total_videos_scoped.delta_period_label}`,
       icon: "video",
     },
     {
       key: "active_narratives",
       title: "Active Narratives",
-      value: data.active_narratives,
-      subLabel: `+${data.overview_metrics_meta.active_narratives.delta_new} ${data.overview_metrics_meta.active_narratives.delta_period_label}`,
+      value: activeNarratives,
+      subLabel: `+${meta.active_narratives.delta_new} ${meta.active_narratives.delta_period_label}`,
       icon: "narratives",
     },
     {
       key: "verified_claims",
-      title: "Verified Claims",
-      value: data.verified_claims,
-      subLabel: `${data.overview_metrics_meta.verified_claims.accuracy_pct}% ${data.overview_metrics_meta.verified_claims.accuracy_label}`,
+      title: claimsTitle,
+      value: claimsValue,
+      subLabel: `${meta.verified_claims.accuracy_pct}% ${meta.verified_claims.accuracy_label}`,
       icon: "claims",
     },
     {
       key: "high_risk_alerts",
       title: "High-Risk Alerts",
-      value: data.high_risk_alerts,
-      subLabel: data.overview_metrics_meta.high_risk_alerts.status_label,
+      value: highRiskAlerts,
+      subLabel: meta.high_risk_alerts.status_label,
       icon: "alerts",
     },
   ];
 
-  const topicTrends = data.topic_trends as Array<Record<string, string | number>>;
-  const topicTrendsMeta = data.topic_trends_meta;
+  const topicTrends = mockData.topic_trends as Array<Record<string, string | number>>;
+  const topicTrendsMeta = mockData.topic_trends_meta;
+
+  if (loading) {
+    return (
+      <div className="mx-auto w-full max-w-6xl p-8">
+        <p className="text-sm text-zinc-500">Loading dashboard…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-6xl p-8">
