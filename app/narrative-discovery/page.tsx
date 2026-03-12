@@ -1,8 +1,24 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Narrative, RiskLevel } from "./mock-data";
-import { narratives } from "./mock-data";
+import mock from "@/public/mock/mockdata.json";
+
+type RawNarrative = (typeof mock.narrative_discovery)[number];
+type RiskLevel = RawNarrative["risk_level"];
+
+type Narrative = {
+  id: string;
+  title: string;
+  description: string;
+  detail: string;
+  category: string;
+  riskLevel: RiskLevel;
+  riskScore: number;
+  videosAnalyzed: number;
+  totalViews: string;
+  timeWindow: string;
+  primaryLink: string;
+};
 
 function riskBadgeClasses(level: RiskLevel) {
   switch (level) {
@@ -24,6 +40,22 @@ function parseViews(value: string) {
 }
 
 type SortOption = "trending" | "risk" | "views";
+
+const narratives: Narrative[] = (mock.narrative_discovery as RawNarrative[]).map(
+  (n) => ({
+    id: n.id,
+    title: n.title,
+    description: n.description,
+    detail: n.detail,
+    category: n.category,
+    riskLevel: n.risk_level,
+    riskScore: n.risk_score,
+    videosAnalyzed: n.videos_analyzed,
+    totalViews: n.total_views,
+    timeWindow: n.time_window,
+    primaryLink: n.primary_link,
+  }),
+);
 
 export default function NarrativeDiscoveryPage() {
   const [search, setSearch] = useState("");
@@ -157,7 +189,7 @@ export default function NarrativeDiscoveryPage() {
         {visibleNarratives.map((narrative) => (
           <article
             key={narrative.id}
-            className="flex flex-col justify-between rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
+            className="surface-card flex flex-col justify-between rounded-xl border p-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
           >
             <div>
               <div className="flex items-start justify-between gap-3">

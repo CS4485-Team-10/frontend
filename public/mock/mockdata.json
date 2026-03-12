@@ -35,7 +35,12 @@
       "risk_level": "High",
       "risk_score": 8.2,
       "videos_analyzed": 1247,
-      "total_views": "15.3M"
+      "total_views": "15.3M",
+      "category": "Health & Wellness",
+      "description": "Analysis of weight loss claims and safety concerns surrounding Ozempic usage across health influencer content.",
+      "detail": "High-volume influencer coverage is amplifying both legitimate medical guidance and unverified shortcuts for rapid weight loss. Content frequently downplays side effects, long-term metabolic impact, and proper clinical supervision.",
+      "time_window": "Last 90 days",
+      "primary_link": "[LINK]"
     },
     {
       "id": "nar-002",
@@ -43,7 +48,12 @@
       "risk_level": "Low",
       "risk_score": 2.1,
       "videos_analyzed": 567,
-      "total_views": "3.2M"
+      "total_views": "3.2M",
+      "category": "Technology",
+      "description": "Discussion of consumer wearables that claim to predict or detect disease risk from biometric signals.",
+      "detail": "Videos in this cluster showcase heart-rate and sleep tracking devices as early warning systems for serious illness. Most content mixes accurate explanations with speculative claims that overstate diagnostic reliability.",
+      "time_window": "Last 120 days",
+      "primary_link": "[LINK]"
     },
     {
       "id": "nar-003",
@@ -51,7 +61,12 @@
       "risk_level": "Medium",
       "risk_score": 5.4,
       "videos_analyzed": 892,
-      "total_views": "8.7M"
+      "total_views": "8.7M",
+      "category": "Alternative Health",
+      "description": "Claims around herbs, supplements, and lifestyle hacks that allegedly prevent or cure COVID-19.",
+      "detail": "Creators frequently present single in-vitro studies or anecdotal experiences as proof that specific herbs or supplements can fully replace vaccination or antiviral treatment. Content often minimizes known risk factors and established public health guidance.",
+      "time_window": "Pandemic period focus",
+      "primary_link": "[LINK]"
     },
     {
       "id": "nar-004",
@@ -59,7 +74,12 @@
       "risk_level": "Low",
       "risk_score": 1.8,
       "videos_analyzed": 723,
-      "total_views": "5.9M"
+      "total_views": "5.9M",
+      "category": "Nutrition",
+      "description": "Evidence-based and speculative claims connecting intermittent fasting routines to lifespan extension.",
+      "detail": "Most content accurately covers metabolic benefits and weight management, but some channels extrapolate rodent data into strong human longevity guarantees. Cross-promotion of fasting apps and supplements is common.",
+      "time_window": "Last 60 days",
+      "primary_link": "[LINK]"
     },
     {
       "id": "nar-005",
@@ -67,7 +87,12 @@
       "risk_level": "Medium",
       "risk_score": 4.7,
       "videos_analyzed": 312,
-      "total_views": "2.1M"
+      "total_views": "2.1M",
+      "category": "Biohacking",
+      "description": "Content promoting nootropic stacks and off-label prescriptions for focus, productivity, and mood.",
+      "detail": "Creators often share personal \"stack\" recipes and before/after productivity anecdotes while under-emphasizing potential side effects, dependence, and lack of long-term clinical evidence.",
+      "time_window": "Last 45 days",
+      "primary_link": "[LINK]"
     },
     {
       "id": "nar-006",
@@ -75,7 +100,12 @@
       "risk_level": "Medium",
       "risk_score": 5.9,
       "videos_analyzed": 445,
-      "total_views": "4.6M"
+      "total_views": "4.6M",
+      "category": "Environment & Health",
+      "description": "Narratives about hidden microplastics in cosmetics, soaps, and everyday personal care products.",
+      "detail": "Some channels responsibly explain emerging toxicology research, while others leap to sweeping claims about guaranteed cancers or irreversible organ damage. Many videos link to alternative 'clean' brands.",
+      "time_window": "Last 90 days",
+      "primary_link": "[LINK]"
     },
     {
       "id": "nar-007",
@@ -83,7 +113,12 @@
       "risk_level": "Low",
       "risk_score": 1.5,
       "videos_analyzed": 1102,
-      "total_views": "12.8M"
+      "total_views": "12.8M",
+      "category": "Technology",
+      "description": "Startups and creators promoting AI services that generate fully personalized diet plans.",
+      "detail": "Videos highlight microbiome tests, continuous glucose monitors, and AI recommendation engines. Risk primarily comes from overpromising clinical outcomes and minimizing the role of professional medical guidance.",
+      "time_window": "Last 120 days",
+      "primary_link": "[LINK]"
     },
     {
       "id": "nar-008",
@@ -91,7 +126,12 @@
       "risk_level": "High",
       "risk_score": 7.6,
       "videos_analyzed": 678,
-      "total_views": "9.2M"
+      "total_views": "9.2M",
+      "category": "Longevity",
+      "description": "Promotion of NMN, resveratrol, and related compounds as proven life-extension therapies.",
+      "detail": "Creators frequently assert dramatic lifespan extension and disease prevention benefits based on early-stage research. Some channels sell their own supplement lines or affiliate products, creating strong commercial incentives.",
+      "time_window": "Last 30 days",
+      "primary_link": "[LINK]"
     }
   ],
   "claim_validation": [
