@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import mock from "@/public/mock/mockdata.json"
 
 type Claim = {
   claim_id: string
@@ -13,13 +13,7 @@ type Claim = {
 }
 
 export default function ClaimValidationPage() {
-  const [claims, setClaims] = useState<Claim[]>([])
-
-  useEffect(() => {
-    fetch("/mock/mockdata.json")
-      .then((res) => res.json())
-      .then((data) => setClaims(data.claim_validation))
-  }, [])
+  const claims = mock.claim_validation as Claim[]
 
   const total = claims.length
   const verified = claims.filter((c) => c.status === "Verified").length
