@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSidebar } from "./SidebarContext";
 
 const navItems = [
   {
@@ -63,22 +64,33 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { collapsed } = useSidebar();
 
   return (
-    <aside className="flex h-full w-[240px] shrink-0 flex-col bg-[#1A1A1A] font-sans">
-      <nav className="flex flex-1 flex-col gap-0.5 p-3 pt-3">
+    <aside
+      className={`flex h-full shrink-0 flex-col border-r border-white/10 bg-[#1A1A1A] font-sans transition-[width] duration-200 ease-out ${
+        collapsed ? "w-14" : "w-[240px]"
+      }`}
+    >
+      <nav
+        id="sidebar-nav"
+        className="flex flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden p-2 pt-2"
+      >
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/" && pathname.startsWith(item.href));
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 rounded-r-md px-3 py-2.5 text-sm text-white transition-colors hover:bg-[#2D2D2D] ${
-                isActive ? "bg-[#2D2D2D] font-semibold" : "font-normal"
-              }`}
+              title={collapsed ? item.label : undefined}
+              className={`flex items-center rounded-md py-2.5 text-sm text-white transition-colors hover:bg-[#2D2D2D] ${
+                collapsed ? "justify-center px-0" : "gap-3 px-3"
+              } ${isActive ? "bg-[#2D2D2D] font-semibold" : "font-normal"}`}
             >
-              <span className="text-white">{item.icon}</span>
-              {item.label}
+              <span className="shrink-0 text-white">{item.icon}</span>
+              <span className={collapsed ? "sr-only" : "truncate"}>{item.label}</span>
             </Link>
           );
         })}
