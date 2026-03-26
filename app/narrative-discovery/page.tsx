@@ -1,24 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import mock from "@/public/mock/mockdata.json";
+import { useEffect, useMemo, useState } from "react";
+import { apiFetch } from "@/lib/api";
+import type { NarrativeItem, NarrativeListResponse } from "@/lib/types/narrative";
 
-type RawNarrative = (typeof mock.narrative_discovery)[number];
-type RiskLevel = RawNarrative["risk_level"];
-
-type Narrative = {
-  id: string;
-  title: string;
-  description: string;
-  detail: string;
-  category: string;
-  riskLevel: RiskLevel;
-  riskScore: number;
-  videosAnalyzed: number;
-  totalViews: string;
-  timeWindow: string;
-  primaryLink: string;
-};
+type RiskLevel = "High" | "Medium" | "Low";
 
 function riskBadgeClasses(level: RiskLevel) {
   switch (level) {
@@ -41,47 +27,41 @@ function parseViews(value: string) {
 
 type SortOption = "trending" | "risk" | "views";
 
-const narratives: Narrative[] = (mock.narrative_discovery as RawNarrative[]).map(
-  (n) => ({
-    id: n.id,
-    title: n.title,
-    description: n.description,
-    detail: n.detail,
-    category: n.category,
-    riskLevel: n.risk_level,
-    riskScore: n.risk_score,
-    videosAnalyzed: n.videos_analyzed,
-    totalViews: n.total_views,
-    timeWindow: n.time_window,
-    primaryLink: n.primary_link,
-  }),
-);
-
 export default function NarrativeDiscoveryPage() {
+  const [narratives, setNarratives] = useState<NarrativeItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("trending");
-  const [activeNarrative, setActiveNarrative] = useState<Narrative | null>(null);
+  const [activeNarrative, setActiveNarrative] = useState<NarrativeItem | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    apiFetch<NarrativeListResponse>(`/narratives?sort_by=${sortBy}`)
+      .then((res) => {
+        setNarratives(res.data);
+        setError(null);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [sortBy]);
 
   const visibleNarratives = useMemo(() => {
     const term = search.trim().toLowerCase();
+    if (!term) return narratives;
+    return narratives.filter((n) => {
+      const haystack = `${n.title} ${n.description ?? ""}`.toLowerCase();
+      return haystack.includes(term);
+    });
+  }, [search, narratives]);
 
-    let result = narratives;
-    if (term) {
-      result = result.filter((n) => {
-        const haystack = `${n.title} ${n.description}`.toLowerCase();
-        return haystack.includes(term);
-      });
-    }
-
-    const sorted = [...result];
-    if (sortBy === "risk") {
-      sorted.sort((a, b) => b.riskScore - a.riskScore);
-    } else if (sortBy === "views") {
-      sorted.sort((a, b) => parseViews(b.totalViews) - parseViews(a.totalViews));
-    }
-
-    return sorted;
-  }, [search, sortBy]);
+  if (error) {
+    return (
+      <div className="mx-auto w-full max-w-6xl p-8">
+        <p className="text-sm text-red-600">Failed to load narratives: {error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-6xl p-8">
@@ -182,64 +162,68 @@ export default function NarrativeDiscoveryPage() {
         </div>
       </section>
 
-      <section
-        aria-label="Narrative cards"
-        className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
-      >
-        {visibleNarratives.map((narrative) => (
-          <article
-            key={narrative.id}
-            className="surface-card flex flex-col justify-between rounded-xl border p-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
-          >
-            <div>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-zinc-900">
-                    {narrative.title}
-                  </h3>
-                  <p className="mt-1 text-xs text-zinc-500">{narrative.description}</p>
+      {loading ? (
+        <p className="text-sm text-zinc-500">Loading...</p>
+      ) : (
+        <section
+          aria-label="Narrative cards"
+          className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
+        >
+          {visibleNarratives.map((narrative) => (
+            <article
+              key={narrative.id}
+              className="surface-card flex flex-col justify-between rounded-xl border p-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
+            >
+              <div>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-zinc-900">
+                      {narrative.title}
+                    </h3>
+                    <p className="mt-1 text-xs text-zinc-500">{narrative.description}</p>
+                  </div>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${riskBadgeClasses(
+                      narrative.risk_level,
+                    )}`}
+                  >
+                    {narrative.risk_level} Risk
+                  </span>
                 </div>
-                <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${riskBadgeClasses(
-                    narrative.riskLevel,
-                  )}`}
-                >
-                  {narrative.riskLevel} Risk
-                </span>
+
+                <dl className="mt-4 space-y-1.5 text-xs text-zinc-600">
+                  <div className="flex items-baseline justify-between">
+                    <dt className="text-zinc-500">Videos Analyzed:</dt>
+                    <dd className="font-medium text-zinc-900">
+                      {narrative.videos_analyzed.toLocaleString("en-US")}
+                    </dd>
+                  </div>
+                  <div className="flex items-baseline justify-between">
+                    <dt className="text-zinc-500">Total Views:</dt>
+                    <dd className="font-medium text-zinc-900">
+                      {narrative.total_views}
+                    </dd>
+                  </div>
+                  <div className="flex items-baseline justify-between">
+                    <dt className="text-zinc-500">Risk Score:</dt>
+                    <dd className="font-medium text-zinc-900">
+                      {narrative.risk_score.toFixed(1)}/10
+                    </dd>
+                  </div>
+                </dl>
               </div>
 
-              <dl className="mt-4 space-y-1.5 text-xs text-zinc-600">
-                <div className="flex items-baseline justify-between">
-                  <dt className="text-zinc-500">Videos Analyzed:</dt>
-                  <dd className="font-medium text-zinc-900">
-                    {narrative.videosAnalyzed.toLocaleString("en-US")}
-                  </dd>
-                </div>
-                <div className="flex items-baseline justify-between">
-                  <dt className="text-zinc-500">Total Views:</dt>
-                  <dd className="font-medium text-zinc-900">
-                    {narrative.totalViews}
-                  </dd>
-                </div>
-                <div className="flex items-baseline justify-between">
-                  <dt className="text-zinc-500">Risk Score:</dt>
-                  <dd className="font-medium text-zinc-900">
-                    {narrative.riskScore.toFixed(1)}/10
-                  </dd>
-                </div>
-              </dl>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setActiveNarrative(narrative)}
-              className="mt-4 inline-flex h-9 w-full cursor-pointer items-center justify-center rounded-lg bg-zinc-900 px-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5F5F5]"
-            >
-              Explore Narrative
-            </button>
-          </article>
-        ))}
-      </section>
+              <button
+                type="button"
+                onClick={() => setActiveNarrative(narrative)}
+                className="mt-4 inline-flex h-9 w-full cursor-pointer items-center justify-center rounded-lg bg-zinc-900 px-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5F5F5]"
+              >
+                Explore Narrative
+              </button>
+            </article>
+          ))}
+        </section>
+      )}
 
       {activeNarrative && (
         <NarrativeDetailDialog
@@ -252,7 +236,7 @@ export default function NarrativeDiscoveryPage() {
 }
 
 type NarrativeDetailDialogProps = {
-  narrative: Narrative;
+  narrative: NarrativeItem;
   onClose: () => void;
 };
 
@@ -281,10 +265,10 @@ function NarrativeDetailDialog({ narrative, onClose }: NarrativeDetailDialogProp
           </div>
           <span
             className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${riskBadgeClasses(
-              narrative.riskLevel,
+              narrative.risk_level,
             )}`}
           >
-            {narrative.riskLevel} Risk
+            {narrative.risk_level} Risk
           </span>
         </div>
 
@@ -295,25 +279,25 @@ function NarrativeDetailDialog({ narrative, onClose }: NarrativeDetailDialogProp
             <div>
               <dt className="text-zinc-500">Videos Analyzed</dt>
               <dd className="mt-0.5 font-medium text-zinc-900">
-                {narrative.videosAnalyzed.toLocaleString("en-US")}
+                {narrative.videos_analyzed.toLocaleString("en-US")}
               </dd>
             </div>
             <div>
               <dt className="text-zinc-500">Total Views</dt>
               <dd className="mt-0.5 font-medium text-zinc-900">
-                {narrative.totalViews}
+                {narrative.total_views}
               </dd>
             </div>
             <div>
               <dt className="text-zinc-500">Risk Score</dt>
               <dd className="mt-0.5 font-medium text-zinc-900">
-                {narrative.riskScore.toFixed(1)}/10
+                {narrative.risk_score.toFixed(1)}/10
               </dd>
             </div>
             <div>
               <dt className="text-zinc-500">Monitoring Window</dt>
               <dd className="mt-0.5 font-medium text-zinc-900">
-                {narrative.timeWindow}
+                {narrative.time_window}
               </dd>
             </div>
           </dl>
@@ -322,7 +306,7 @@ function NarrativeDetailDialog({ narrative, onClose }: NarrativeDetailDialogProp
         <div className="mt-4 flex items-center justify-between gap-4">
           <div className="text-xs text-zinc-600">
             <div className="font-medium text-zinc-700">Narrative Workspace</div>
-            <div className="mt-0.5 text-zinc-500">{narrative.primaryLink}</div>
+            <div className="mt-0.5 text-zinc-500">{narrative.primary_link ?? "—"}</div>
           </div>
 
           <button
@@ -337,4 +321,3 @@ function NarrativeDetailDialog({ narrative, onClose }: NarrativeDetailDialogProp
     </div>
   );
 }
-
