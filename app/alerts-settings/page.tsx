@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import mock from "@/public/mock/mockdata.json";
 import { useNotifications } from "@/components/layout/NotificationContext";
+import { useSidebar } from "@/components/layout/SidebarContext";
 
 type RiskLevel = "High" | "Medium" | "Low";
 type SortFilter = "All" | RiskLevel;
@@ -79,6 +80,7 @@ export default function AlertsSettingsPage() {
   const router = useRouter();
   const [sortFilter, setSortFilter] = useState<SortFilter>("All");
   const { notifHighRisk, notifMediumRisk, setNotifHighRisk, setNotifMediumRisk } = useNotifications();
+  const { compactMode, setCompactMode } = useSidebar();
 
 
   const filterOptions: SortFilter[] = ["All", "High", "Medium", "Low"];
@@ -224,11 +226,8 @@ export default function AlertsSettingsPage() {
               ))}
             </div>
           </SettingRow>
-          <SettingRow label="Compact sidebar" description="Show icon-only collapsed state by default">
-            <Toggle enabled={true} onChange={() => {}} />
-          </SettingRow>
-          <SettingRow label="Reduce motion" description="Disable animated transitions">
-            <Toggle enabled={false} onChange={() => {}} />
+          <SettingRow label="Compact sidebar" description="Lock sidebar to icon-only mode">
+            <Toggle enabled={compactMode} onChange={setCompactMode} />
           </SettingRow>
         </SectionCard>
 
@@ -245,32 +244,6 @@ export default function AlertsSettingsPage() {
             description="Notify on Medium-Risk narrative changes"
           >
             <Toggle enabled={notifMediumRisk} onChange={setNotifMediumRisk} />
-          </SettingRow>
-        </SectionCard>
-
-        {/* Alert Rules */}
-        <SectionCard title="Alert Rules">
-          <SettingRow
-            label="Risk threshold"
-            description="Score above which an alert is triggered"
-          >
-            <span className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-sm text-zinc-700">
-              7.0 / 10
-            </span>
-          </SettingRow>
-          <SettingRow
-            label="Auto-archive after"
-            description="Days before resolved alerts are archived"
-          >
-            <span className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-sm text-zinc-700">
-              30 days
-            </span>
-          </SettingRow>
-          <SettingRow
-            label="Monitored categories"
-            description="Content categories in scope"
-          >
-            <span className="text-sm text-zinc-500">All categories</span>
           </SettingRow>
         </SectionCard>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import rawMock from "@/public/mock/mockdata.json";
 
@@ -65,6 +65,14 @@ type SortOption = "trending" | "risk" | "views";
 // Page
 // ---------------------------------------------------------------------------
 export default function NarrativeDiscoveryPage() {
+  return (
+    <Suspense>
+      <NarrativeDiscoveryInner />
+    </Suspense>
+  );
+}
+
+function NarrativeDiscoveryInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
 
