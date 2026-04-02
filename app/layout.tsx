@@ -1,46 +1,39 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { Header, Sidebar, SidebarProvider, NotificationProvider } from "@/components/layout";
+"use client";
+
+import { usePathname } from "next/navigation";
+import { Header } from "@/components/layout/Header";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { SidebarProvider } from "@/components/layout/SidebarContext";
+import { NotificationProvider } from "@/components/layout/NotificationContext";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+  // 1. Define the "Lockdown" condition
+  // If the pathname is just "/" (where your login is), we hide the nav
+  const isLoginPage = pathname === "/";
 
-export const metadata: Metadata = {
-  title: "YouTube Intelligence",
-  description: "YouTube Intelligence dashboard",
-};
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
-      >
-        <NotificationProvider>
-          <SidebarProvider>
-            <div className="flex h-screen flex-col">
-              <Header />
-              <div className="flex min-h-0 flex-1">
-                  <Sidebar />
-                <main className="page-enter min-w-0 flex-1 overflow-auto bg-[#F5F5F5]">
+      <body>
+        <SidebarProvider>
+          <NotificationProvider>
+            <div className="flex h-screen bg-[#F9F9F9]">
+              {/* 2. ONLY show Sidebar if NOT on login page */}
+              {!isLoginPage && <Sidebar />}
+              
+              <div className="flex flex-1 flex-col overflow-hidden">
+                {/* 3. ONLY show Header if NOT on login page */}
+                {!isLoginPage && <Header />}
+                
+                <main className="flex-1 overflow-y-auto">
                   {children}
                 </main>
               </div>
             </div>
-          </SidebarProvider>
-        </NotificationProvider>
+          </NotificationProvider>
+        </SidebarProvider>
       </body>
     </html>
   );
