@@ -1,5 +1,21 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Development Setup
+
+```bash
+# Configure git hooks
+bash scripts/setup-hooks.sh
+```
+
+Or manually:
+
+```bash
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit
+```
+
+The pre-commit hook checks: **ESLint** (linting), **TypeScript** (type checking), **Next.js build** (build verification).
+
 ## Getting Started
 
 First, run the development server:

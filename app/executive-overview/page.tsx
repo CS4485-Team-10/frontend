@@ -194,38 +194,40 @@ export default function ExecutiveOverviewPage() {
     );
   }
 
+  const meta = data.overview_metrics_meta;
+
   const overviewMetrics: OverviewMetricCard[] = [
     {
       key: "total_videos_scoped",
       title: "Total Videos Scoped",
       value: data.total_videos_scoped,
-      subLabel: `+${data.overview_metrics_meta.total_videos_scoped.delta_pct}% ${data.overview_metrics_meta.total_videos_scoped.delta_period_label}`,
+      subLabel: `+${meta.total_videos_scoped.delta_pct}% ${meta.total_videos_scoped.delta_period_label}`,
       icon: "video",
     },
     {
       key: "active_narratives",
       title: "Active Narratives",
       value: data.active_narratives,
-      subLabel: `+${data.overview_metrics_meta.active_narratives.delta_new} ${data.overview_metrics_meta.active_narratives.delta_period_label}`,
+      subLabel: `+${meta.active_narratives.delta_new} ${meta.active_narratives.delta_period_label}`,
       icon: "narratives",
     },
     {
       key: "verified_claims",
       title: "Verified Claims",
       value: data.verified_claims,
-      subLabel: `${data.overview_metrics_meta.verified_claims.accuracy_pct}% ${data.overview_metrics_meta.verified_claims.accuracy_label}`,
+      subLabel: `${meta.verified_claims.accuracy_pct}% ${meta.verified_claims.accuracy_label}`,
       icon: "claims",
     },
     {
       key: "high_risk_alerts",
       title: "High-Risk Alerts",
       value: data.high_risk_alerts,
-      subLabel: data.overview_metrics_meta.high_risk_alerts.status_label,
+      subLabel: meta.high_risk_alerts.status_label,
       icon: "alerts",
     },
   ];
 
-  const topicTrends = data.topic_trends as Array<Record<string, string | number>>;
+  const topicTrends = data.topic_trends;
   const topicTrendsMeta = data.topic_trends_meta;
 
   return (
