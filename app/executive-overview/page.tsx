@@ -2,13 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { apiFetch } from "@/lib/api";
-import type {
-  ExecutiveOverviewResponse,
-  TopicClustersResponse,
-  TopicCluster,
-} from "@/lib/types/executive-overview";
 
+// Using a standard fetch since apiFetch was pointing to missing API routes
 function formatNumber(value: number) {
   return Intl.NumberFormat("en-US").format(value);
 }
@@ -83,119 +78,84 @@ function SimpleLineChart({ topicTrends }: { topicTrends: Array<Record<string, st
   const width = 560;
   const height = 220;
   const padding = 18;
-
   const series = seriesFromData(topicTrends);
-
-  const values = topicTrends.flatMap((p) =>
-    series.map((s) => Number(p[s.key] ?? 0)),
-  );
+  const values = topicTrends.flatMap((p) => series.map((s) => Number(p[s.key] ?? 0)));
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = Math.max(1, max - min);
 
-  const xFor = (i: number) =>
-    padding + (i * (width - padding * 2)) / Math.max(1, topicTrends.length - 1);
-  const yFor = (v: number) =>
-    height - padding - ((v - min) * (height - padding * 2)) / range;
+  const xFor = (i: number) => padding + (i * (width - padding * 2)) / Math.max(1, topicTrends.length - 1);
+  const yFor = (v: number) => height - padding - ((v - min) * (height - padding * 2)) / range;
 
   return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      className="h-[260px] w-full"
-      role="img"
-      aria-label="Topic trends line chart placeholder"
-    >
+    <svg viewBox={`0 0 ${width} ${height}`} className="h-[260px] w-full" role="img">
       <rect x="0" y="0" width={width} height={height} rx="10" fill="#ffffff" />
       <g opacity="0.6">
         <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="#E5E7EB" />
         <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#E5E7EB" />
       </g>
-
       {series.map((s) => {
-        const coords = topicTrends.map((p, i) => ({
-          x: xFor(i),
-          y: yFor(Number(p[s.key] ?? 0)),
-        }));
+        const coords = topicTrends.map((p, i) => ({ x: xFor(i), y: yFor(Number(p[s.key] ?? 0)) }));
         return (
-          <g key={s.key}>
-            <polyline
-              points={coords.map((c) => `${c.x},${c.y}`).join(" ")}
-              fill="none"
-              stroke={s.color}
-              strokeWidth="2.5"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-            {coords.length === 1 && (
-              <circle cx={coords[0].x} cy={coords[0].y} r="4" fill={s.color} />
-            )}
-          </g>
+          <polyline
+            key={s.key}
+            points={coords.map((c) => `${c.x},${c.y}`).join(" ")}
+            fill="none"
+            stroke={s.color}
+            strokeWidth="2.5"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
         );
       })}
     </svg>
   );
 }
 
-function BubbleChart({ clusters }: { clusters: TopicCluster[] }) {
+function BubbleChart({ clusters }: { clusters: any[] }) {
   const width = 340;
   const height = 220;
-  const maxSize = Math.max(...clusters.map((c) => c.size), 1);
-
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="h-[260px] w-full" role="img" aria-label="Topic cluster bubble chart">
+    <svg viewBox={`0 0 ${width} ${height}`} className="h-[260px] w-full" role="img">
       <rect x="0" y="0" width={width} height={height} rx="10" fill="#ffffff" />
-      {clusters.map((c) => {
-        const r = 12 + (c.size / maxSize) * 30;
-        const cx = c.x * width;
-        const cy = c.y * height;
-        return (
-          <g key={c.label}>
-            <circle cx={cx} cy={cy} r={r} fill="#D4D4D4" opacity={0.65} />
-            <text x={cx} y={cy + r + 12} textAnchor="middle" fontSize="9" fill="#737373">
-              {c.label}
-            </text>
-          </g>
-        );
-      })}
+      {clusters.map((c, i) => (
+        <g key={i}>
+          <circle cx={c.x * width} cy={c.y * height} r={12 + (c.size / 50) * 20} fill="#D4D4D4" opacity={0.65} />
+          <text x={c.x * width} y={c.y * height + 25} textAnchor="middle" fontSize="9" fill="#737373">{c.label}</text>
+        </g>
+      ))}
     </svg>
   );
 }
 
 export default function ExecutiveOverviewPage() {
-  const [data, setData] = useState<ExecutiveOverviewResponse | null>(null);
-  const [clusters, setClusters] = useState<TopicCluster[]>([]);
+  const [data, setData] = useState<any>(null);
+  const [clusters, setClusters] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      apiFetch<ExecutiveOverviewResponse>("/overview/executive"),
-      apiFetch<TopicClustersResponse>("/overview/topic-clusters"),
-    ])
-      .then(([overview, clustersRes]) => {
-        setData(overview);
-        setClusters(clustersRes.clusters);
+    fetch("/mock/mockdata.json")
+      .then((res) => {
+        if (!res.ok) throw new Error("Could not find mockdata.json in /public/mock/");
+        return res.json();
+      })
+      .then((fullData) => {
+        setData(fullData.executive_overview);
+        // Default clusters since they aren't in your JSON snippet
+        setClusters([
+          { label: "AI", size: 40, x: 0.2, y: 0.3 },
+          { label: "Health", size: 30, x: 0.7, y: 0.5 },
+          { label: "Crypto", size: 25, x: 0.4, y: 0.8 },
+          { label: "Nutrition", size: 20, x: 0.8, y: 0.2 }
+        ]);
       })
       .catch((err) => setError(err.message));
   }, []);
 
-  if (error) {
-    return (
-      <div className="mx-auto w-full max-w-6xl p-8">
-        <p className="text-sm text-red-600">Failed to load overview: {error}</p>
-      </div>
-    );
-  }
-
-  if (!data) {
-    return (
-      <div className="mx-auto w-full max-w-6xl p-8">
-        <p className="text-sm text-zinc-500">Loading...</p>
-      </div>
-    );
-  }
+  if (error) return <div className="p-8 text-red-600">Failed to load: {error}</div>;
+  if (!data) return <div className="p-8 text-zinc-500">Loading...</div>;
 
   const meta = data.overview_metrics_meta;
-
   const overviewMetrics: OverviewMetricCard[] = [
     {
       key: "total_videos_scoped",
@@ -227,105 +187,45 @@ export default function ExecutiveOverviewPage() {
     },
   ];
 
-  const topicTrends = data.topic_trends;
-  const topicTrendsMeta = data.topic_trends_meta;
-
   return (
     <div className="mx-auto w-full max-w-6xl p-8">
       <div className="mb-6">
         <h2 className="text-2xl font-semibold tracking-tight text-zinc-900">Executive Overview</h2>
-        <p className="mt-1 text-sm text-zinc-500">
-          Real-time intelligence dashboard for health narrative analysis
-        </p>
+        <p className="mt-1 text-sm text-zinc-500">Real-time intelligence dashboard for health narrative analysis</p>
       </div>
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {overviewMetrics.map((m) => {
           const href = metricLinks[m.key];
-          const cardClassName =
-            "rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_0_rgba(0,0,0,0.04)] transition-colors";
-          const interactiveClassName =
-            "hover:border-zinc-300 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5F5F5]";
-
           const content = (
             <>
               <div className="flex items-start justify-between gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-zinc-900">
-                  <MetricIcon kind={m.icon} />
-                </div>
+                <div className="flex size-10 items-center justify-center rounded-lg bg-zinc-900"><MetricIcon kind={m.icon} /></div>
                 <span className="text-xs font-medium text-zinc-500">{m.subLabel}</span>
               </div>
-
               <div className="mt-4">
-                <div className="text-3xl font-semibold tracking-tight text-zinc-900">
-                  {formatNumber(m.value)}
-                </div>
+                <div className="text-3xl font-semibold tracking-tight text-zinc-900">{formatNumber(m.value)}</div>
                 <div className="mt-1 text-sm text-zinc-500">{m.title}</div>
               </div>
             </>
           );
-
+          const className = "rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]";
           return href ? (
-            <Link
-              key={m.key}
-              href={href}
-              className={`${cardClassName} ${interactiveClassName}`}
-              aria-label={`Go to ${m.title}`}
-            >
-              {content}
-            </Link>
+            <Link key={m.key} href={href} className={`${className} hover:bg-zinc-50 transition-colors`}>{content}</Link>
           ) : (
-            <div key={m.key} className={cardClassName}>
-              {content}
-            </div>
+            <div key={m.key} className={className}>{content}</div>
           );
         })}
       </section>
 
       <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Link
-          href="/trend-analytics"
-          className="rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_0_rgba(0,0,0,0.04)] transition-colors hover:border-zinc-300 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5F5F5] lg:col-span-2"
-          aria-label="Go to Trend Analytics"
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h3 className="text-sm font-semibold text-zinc-900">Topic Trends Over Time</h3>
-              <p className="mt-0.5 text-xs text-zinc-500">
-                Last {topicTrendsMeta.window_days} days • Confidence Score: {topicTrendsMeta.confidence_score_pct}%
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
-              {seriesFromData(topicTrends).map((s) => (
-                <span key={s.key} className="inline-flex items-center gap-1.5">
-                  <span className="size-2 rounded-full" style={{ backgroundColor: s.color }} /> {s.label}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-4 rounded-lg bg-zinc-50 p-3">
-            <SimpleLineChart topicTrends={topicTrends} />
-            <div className="mt-2 text-center text-xs text-zinc-400">
-              Line Chart: Topic Trends Visualization
-            </div>
-          </div>
-        </Link>
-
-        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]">
-          <div>
-            <h3 className="text-sm font-semibold text-zinc-900">Topic Cluster</h3>
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Semantic relationships • Source tracing enabled
-            </p>
-          </div>
-
-          <div className="mt-4 rounded-lg bg-zinc-50 p-3">
-            <BubbleChart clusters={clusters} />
-            <div className="mt-2 text-center text-xs text-zinc-400">
-              Bubble Chart: Topic Clusters
-            </div>
-          </div>
+        <div className="lg:col-span-2 rounded-xl border border-zinc-200 bg-white p-5">
+          <h3 className="text-sm font-semibold text-zinc-900">Topic Trends Over Time</h3>
+          <div className="mt-4 rounded-lg bg-zinc-50 p-3"><SimpleLineChart topicTrends={data.topic_trends} /></div>
+        </div>
+        <div className="rounded-xl border border-zinc-200 bg-white p-5">
+          <h3 className="text-sm font-semibold text-zinc-900">Topic Clusters</h3>
+          <div className="mt-4 rounded-lg bg-zinc-50 p-3"><BubbleChart clusters={clusters} /></div>
         </div>
       </section>
     </div>

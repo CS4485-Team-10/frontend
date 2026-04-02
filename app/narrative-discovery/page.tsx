@@ -2,8 +2,6 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { apiFetch } from "@/lib/api";
-import type { NarrativeItem, NarrativeListResponse } from "@/lib/types/narrative";
 
 type RiskLevel = "High" | "Medium" | "Low";
 
@@ -15,24 +13,26 @@ function riskBadgeClasses(level: RiskLevel) {
     case "High":   return "bg-red-50 text-red-700 ring-1 ring-red-100";
     case "Medium": return "bg-amber-50 text-amber-700 ring-1 ring-amber-100";
     case "Low":    return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100";
+    default:       return "bg-zinc-50 text-zinc-700 ring-1 ring-zinc-100";
   }
 }
 
 function parseViews(value: string) {
+  if (!value) return 0;
   const t = value.trim().toUpperCase();
   const multiplier = t.endsWith("M") ? 1_000_000 : t.endsWith("K") ? 1_000 : 1;
-  const num = parseFloat(t.replace(/[MK]/g, ""));
+  const num = parseFloat(t.replace(/[MK,]/g, ""));
   return Number.isNaN(num) ? 0 : num * multiplier;
 }
 
 type SortOption = "trending" | "risk" | "views";
 
 // ---------------------------------------------------------------------------
-// Page
+// Page Wrapper (for Suspense)
 // ---------------------------------------------------------------------------
 export default function NarrativeDiscoveryPage() {
   return (
-    <Suspense>
+    <Suspense fallback={<div className="p-8 text-zinc-500 text-sm">Loading components...</div>}>
       <NarrativeDiscoveryInner />
     </Suspense>
   );
@@ -42,35 +42,39 @@ function NarrativeDiscoveryInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [narratives, setNarratives] = useState<NarrativeItem[]>([]);
+  const [narratives, setNarratives] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("trending");
-  const [activeNarrative, setActiveNarrative] = useState<NarrativeItem | null>(null);
+  const [activeNarrative, setActiveNarrative] = useState<any | null>(null);
 
+  // 1. Fetch from local mockdata.json
   useEffect(() => {
     setLoading(true);
-    apiFetch<NarrativeListResponse>(`/narratives?sort_by=${sortBy}`)
+    fetch("/mock/mockdata.json")
       .then((res) => {
-        setNarratives(res.data);
+        if (!res.ok) throw new Error("Could not find mockdata.json");
+        return res.json();
+      })
+      .then((fullData) => {
+        setNarratives(fullData.narrative_discovery || []);
         setError(null);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [sortBy]);
+  }, []);
 
-  // Deep-link: open modal if ?id=<narrativeId> is present in the URL
+  // 2. Deep-link logic
   useEffect(() => {
     const id = searchParams.get("id");
-    if (!id) return;
-    const found = narratives.find((n) => n.id === id) ?? null;
+    if (!id || narratives.length === 0) return;
+    const found = narratives.find((n) => String(n.id) === String(id)) ?? null;
     setActiveNarrative(found);
   }, [searchParams, narratives]);
 
-  function openNarrative(n: NarrativeItem) {
+  function openNarrative(n: any) {
     setActiveNarrative(n);
-    // Keep URL in sync so the link is shareable / back-navigable
     router.replace(`/narrative-discovery?id=${n.id}`, { scroll: false });
   }
 
@@ -79,24 +83,32 @@ function NarrativeDiscoveryInner() {
     router.replace("/narrative-discovery", { scroll: false });
   }
 
+  // 3. Search and Sort Logic
   const visibleNarratives = useMemo(() => {
     const term = search.trim().toLowerCase();
-    let result = narratives;
+    let result = [...narratives];
+    
     if (term) {
       result = result.filter((n) =>
-        `${n.title} ${n.description ?? ""}`.toLowerCase().includes(term),
+        `${n.title} ${n.description ?? ""}`.toLowerCase().includes(term)
       );
     }
-    const sorted = [...result];
-    if (sortBy === "risk") sorted.sort((a, b) => b.risk_score - a.risk_score);
-    if (sortBy === "views") sorted.sort((a, b) => parseViews(b.total_views) - parseViews(a.total_views));
-    return sorted;
+
+    if (sortBy === "risk") {
+      result.sort((a, b) => b.risk_score - a.risk_score);
+    } else if (sortBy === "views") {
+      result.sort((a, b) => parseViews(b.total_views) - parseViews(a.total_views));
+    }
+    // "trending" uses the default JSON order
+    return result;
   }, [search, sortBy, narratives]);
 
   if (error) {
     return (
       <div className="mx-auto w-full max-w-6xl p-8">
-        <p className="text-sm text-red-600">Failed to load narratives: {error}</p>
+        <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
+          <p className="text-sm text-red-600 font-medium">Failed to load narratives: {error}</p>
+        </div>
       </div>
     );
   }
@@ -113,13 +125,10 @@ function NarrativeDiscoveryInner() {
       </header>
 
       {/* Filter bar */}
-      <section
-        aria-label="Narrative filters"
-        className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-      >
+      <section className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="relative w-full max-w-md">
           <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-zinc-400">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="size-4" aria-hidden>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="size-4">
               <circle cx="11" cy="11" r="6" />
               <path d="m16 16 3.5 3.5" />
             </svg>
@@ -129,94 +138,65 @@ function NarrativeDiscoveryInner() {
             placeholder="Search narratives..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-10 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 shadow-sm focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
+            className="h-10 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
           />
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-          <div className="flex items-center gap-2">
-            <label htmlFor="category" className="text-xs font-medium text-zinc-500">
-              Category
-            </label>
-            <div className="relative">
-              <select
-                id="category"
-                className="h-10 cursor-pointer appearance-none rounded-lg border border-zinc-200 bg-white px-3 pr-8 text-sm text-zinc-900 shadow-sm focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
-                defaultValue="all"
-              >
-                <option value="all">All Categories</option>
-              </select>
-              <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-zinc-400">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="size-4" aria-hidden>
-                  <path d="m7 10 5 5 5-5" />
-                </svg>
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-zinc-500">Sort by</span>
-            <div className="relative">
-              <select
-                id="sort"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
-                className="h-10 cursor-pointer appearance-none rounded-lg border border-zinc-200 bg-white px-3 pr-8 text-sm text-zinc-900 shadow-sm focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
-              >
-                <option value="trending">Trending</option>
-                <option value="risk">Risk Score</option>
-                <option value="views">Total Views</option>
-              </select>
-              <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-zinc-400">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="size-4" aria-hidden>
-                  <path d="m7 10 5 5 5-5" />
-                </svg>
-              </span>
-            </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-zinc-500">Sort by</span>
+          <div className="relative">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="h-10 cursor-pointer appearance-none rounded-lg border border-zinc-200 bg-white px-3 pr-8 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
+            >
+              <option value="trending">Trending</option>
+              <option value="risk">Risk Score</option>
+              <option value="views">Total Views</option>
+            </select>
           </div>
         </div>
       </section>
 
       {loading ? (
-        <p className="text-sm text-zinc-500">Loading...</p>
+        <p className="text-sm text-zinc-500 animate-pulse">Scanning social data...</p>
       ) : (
-        <section aria-label="Narrative cards" className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {visibleNarratives.map((narrative) => (
             <article
               key={narrative.id}
-              className="flex flex-col justify-between rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
+              className="flex flex-col justify-between rounded-xl border border-zinc-200 bg-white p-5 shadow-sm hover:border-zinc-300 transition-all"
             >
               <div>
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-semibold text-zinc-900">{narrative.title}</h3>
-                    <p className="mt-1 text-xs text-zinc-500">{narrative.description}</p>
+                    <p className="mt-1 text-xs text-zinc-500 line-clamp-2">{narrative.description}</p>
                   </div>
-                  <span className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-medium ${riskBadgeClasses(narrative.risk_level)}`}>
-                    {narrative.risk_level} Risk
+                  <span className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${riskBadgeClasses(narrative.risk_level)}`}>
+                    {narrative.risk_level}
                   </span>
                 </div>
 
-                <dl className="mt-4 space-y-1.5 text-xs text-zinc-600">
-                  <div className="flex items-baseline justify-between">
-                    <dt className="text-zinc-500">Videos Analyzed:</dt>
-                    <dd className="font-medium text-zinc-900">{narrative.videos_analyzed.toLocaleString("en-US")}</dd>
+                <dl className="mt-4 space-y-1.5 text-xs">
+                  <div className="flex justify-between">
+                    <dt className="text-zinc-500">Videos:</dt>
+                    <dd className="font-medium text-zinc-900">{narrative.videos_analyzed?.toLocaleString()}</dd>
                   </div>
-                  <div className="flex items-baseline justify-between">
+                  <div className="flex justify-between">
                     <dt className="text-zinc-500">Total Views:</dt>
                     <dd className="font-medium text-zinc-900">{narrative.total_views}</dd>
                   </div>
-                  <div className="flex items-baseline justify-between">
+                  <div className="flex justify-between">
                     <dt className="text-zinc-500">Risk Score:</dt>
-                    <dd className="font-medium text-zinc-900">{narrative.risk_score.toFixed(1)}/10</dd>
+                    <dd className="font-medium text-zinc-900">{narrative.risk_score}/10</dd>
                   </div>
                 </dl>
               </div>
 
               <button
-                type="button"
                 onClick={() => openNarrative(narrative)}
-                className="mt-4 inline-flex h-9 w-full cursor-pointer items-center justify-center rounded-lg bg-zinc-900 px-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 focus-visible:ring-offset-2"
+                className="mt-4 inline-flex h-9 w-full items-center justify-center rounded-lg bg-zinc-900 text-sm font-medium text-white hover:bg-zinc-800 transition-colors"
               >
                 Explore Narrative
               </button>
@@ -233,84 +213,55 @@ function NarrativeDiscoveryInner() {
 }
 
 // ---------------------------------------------------------------------------
-// Modal
+// Modal Component
 // ---------------------------------------------------------------------------
-type NarrativeDetailDialogProps = {
-  narrative: NarrativeItem;
-  onClose: () => void;
-};
-
-function NarrativeDetailDialog({ narrative, onClose }: NarrativeDetailDialogProps) {
-  // Close on Escape key
+function NarrativeDetailDialog({ narrative, onClose }: { narrative: any; onClose: () => void }) {
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
   return (
-    <div
-      className="backdrop-enter fixed inset-0 z-40 flex cursor-pointer items-center justify-center bg-black/40 px-4"
-      aria-modal="true"
-      role="dialog"
-      aria-labelledby="narrative-detail-title"
-      onClick={onClose}
-    >
-      <div
-        className="dialog-enter w-full max-w-lg cursor-default rounded-2xl bg-white p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between">
           <div>
-            <h2 id="narrative-detail-title" className="text-base font-semibold text-zinc-900">
-              {narrative.title}
-            </h2>
-            <p className="mt-1 text-xs text-zinc-500">{narrative.category}</p>
+            <h2 className="text-lg font-bold text-zinc-900">{narrative.title}</h2>
+            <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mt-1">{narrative.category}</p>
           </div>
-          <span className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-medium ${riskBadgeClasses(narrative.risk_level)}`}>
-            {narrative.risk_level} Risk
+          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${riskBadgeClasses(narrative.risk_level)}`}>
+            {narrative.risk_level} RISK
           </span>
         </div>
 
-        <p className="mt-4 text-sm text-zinc-700">{narrative.detail}</p>
+        <p className="mt-4 text-sm leading-relaxed text-zinc-600">{narrative.detail || narrative.description}</p>
 
-        <div className="mt-4 rounded-lg bg-zinc-50 p-4">
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs text-zinc-600">
-            <div>
-              <dt className="text-zinc-500">Videos Analyzed</dt>
-              <dd className="mt-0.5 font-medium text-zinc-900">{narrative.videos_analyzed.toLocaleString("en-US")}</dd>
-            </div>
-            <div>
-              <dt className="text-zinc-500">Total Views</dt>
-              <dd className="mt-0.5 font-medium text-zinc-900">{narrative.total_views}</dd>
-            </div>
-            <div>
-              <dt className="text-zinc-500">Risk Score</dt>
-              <dd className="mt-0.5 font-medium text-zinc-900">{narrative.risk_score.toFixed(1)}/10</dd>
-            </div>
-            <div>
-              <dt className="text-zinc-500">Monitoring Window</dt>
-              <dd className="mt-0.5 font-medium text-zinc-900">{narrative.time_window}</dd>
-            </div>
-          </dl>
-        </div>
-
-        <div className="mt-4 flex items-center justify-between gap-4">
-          <div className="text-xs text-zinc-600">
-            <div className="font-medium text-zinc-700">Narrative Workspace</div>
-            <div className="mt-0.5 text-zinc-500">{narrative.primary_link ?? "—"}</div>
+        <div className="mt-6 grid grid-cols-2 gap-4 bg-zinc-50 p-4 rounded-xl border border-zinc-100">
+          <div>
+            <dt className="text-[10px] text-zinc-400 uppercase font-bold">Analyzed</dt>
+            <dd className="text-sm font-semibold text-zinc-900">{narrative.videos_analyzed?.toLocaleString()} Videos</dd>
           </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-9 cursor-pointer items-center justify-center rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/15"
-          >
-            Close
-          </button>
+          <div>
+            <dt className="text-[10px] text-zinc-400 uppercase font-bold">Views</dt>
+            <dd className="text-sm font-semibold text-zinc-900">{narrative.total_views}</dd>
+          </div>
+          <div>
+            <dt className="text-[10px] text-zinc-400 uppercase font-bold">Risk Score</dt>
+            <dd className="text-sm font-semibold text-zinc-900">{narrative.risk_score}/10</dd>
+          </div>
+          <div>
+            <dt className="text-[10px] text-zinc-400 uppercase font-bold">Window</dt>
+            <dd className="text-sm font-semibold text-zinc-900">{narrative.time_window}</dd>
+          </div>
         </div>
+
+        <button
+          onClick={onClose}
+          className="mt-6 w-full h-10 bg-zinc-100 text-zinc-900 font-semibold rounded-lg hover:bg-zinc-200 transition-colors"
+        >
+          Close
+        </button>
       </div>
     </div>
   );
