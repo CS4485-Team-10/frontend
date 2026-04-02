@@ -2,44 +2,10 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import rawMock from "@/public/mock/mockdata.json";
+import { apiFetch } from "@/lib/api";
+import type { NarrativeItem, NarrativeListResponse } from "@/lib/types/narrative";
 
-// ---------------------------------------------------------------------------
-// Types — field names mirror what a real API response would return.
-// When the backend is connected, replace `rawMock.narrative_discovery` with
-// `await fetch('/api/narratives').then(r => r.json())` and this file needs
-// no other changes.
-// ---------------------------------------------------------------------------
-export type RiskLevel = "High" | "Medium" | "Low";
-
-export type Narrative = {
-  id: string;
-  title: string;
-  description: string;
-  detail: string;
-  category: string;
-  risk_level: RiskLevel;
-  risk_score: number;
-  videos_analyzed: number;
-  total_views: string;
-  time_window: string;
-  primary_link: string;
-};
-
-// Normalize the JSON data — any future API adapter goes here too.
-const narratives: Narrative[] = rawMock.narrative_discovery.map((n) => ({
-  id: n.id,
-  title: n.title,
-  description: n.description,
-  detail: n.detail ?? "",
-  category: n.category,
-  risk_level: n.risk_level as RiskLevel,
-  risk_score: n.risk_score,
-  videos_analyzed: n.videos_analyzed,
-  total_views: n.total_views,
-  time_window: n.time_window ?? "",
-  primary_link: n.primary_link ?? "[LINK]",
-}));
+type RiskLevel = "High" | "Medium" | "Low";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -73,12 +39,26 @@ export default function NarrativeDiscoveryPage() {
 }
 
 function NarrativeDiscoveryInner() {
-  const router       = useRouter();
+  const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [search, setSearch]               = useState("");
-  const [sortBy, setSortBy]               = useState<SortOption>("trending");
-  const [activeNarrative, setActiveNarrative] = useState<Narrative | null>(null);
+  const [narratives, setNarratives] = useState<NarrativeItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<SortOption>("trending");
+  const [activeNarrative, setActiveNarrative] = useState<NarrativeItem | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    apiFetch<NarrativeListResponse>(`/narratives?sort_by=${sortBy}`)
+      .then((res) => {
+        setNarratives(res.data);
+        setError(null);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [sortBy]);
 
   // Deep-link: open modal if ?id=<narrativeId> is present in the URL
   useEffect(() => {
@@ -86,9 +66,9 @@ function NarrativeDiscoveryInner() {
     if (!id) return;
     const found = narratives.find((n) => n.id === id) ?? null;
     setActiveNarrative(found);
-  }, [searchParams]);
+  }, [searchParams, narratives]);
 
-  function openNarrative(n: Narrative) {
+  function openNarrative(n: NarrativeItem) {
     setActiveNarrative(n);
     // Keep URL in sync so the link is shareable / back-navigable
     router.replace(`/narrative-discovery?id=${n.id}`, { scroll: false });
@@ -104,14 +84,22 @@ function NarrativeDiscoveryInner() {
     let result = narratives;
     if (term) {
       result = result.filter((n) =>
-        `${n.title} ${n.description}`.toLowerCase().includes(term),
+        `${n.title} ${n.description ?? ""}`.toLowerCase().includes(term),
       );
     }
     const sorted = [...result];
-    if (sortBy === "risk")  sorted.sort((a, b) => b.risk_score - a.risk_score);
+    if (sortBy === "risk") sorted.sort((a, b) => b.risk_score - a.risk_score);
     if (sortBy === "views") sorted.sort((a, b) => parseViews(b.total_views) - parseViews(a.total_views));
     return sorted;
-  }, [search, sortBy]);
+  }, [search, sortBy, narratives]);
+
+  if (error) {
+    return (
+      <div className="mx-auto w-full max-w-6xl p-8">
+        <p className="text-sm text-red-600">Failed to load narratives: {error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-6xl p-8">
@@ -189,50 +177,53 @@ function NarrativeDiscoveryInner() {
         </div>
       </section>
 
-      {/* Cards grid */}
-      <section aria-label="Narrative cards" className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {visibleNarratives.map((narrative) => (
-          <article
-            key={narrative.id}
-            className="flex flex-col justify-between rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
-          >
-            <div>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-zinc-900">{narrative.title}</h3>
-                  <p className="mt-1 text-xs text-zinc-500">{narrative.description}</p>
+      {loading ? (
+        <p className="text-sm text-zinc-500">Loading...</p>
+      ) : (
+        <section aria-label="Narrative cards" className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {visibleNarratives.map((narrative) => (
+            <article
+              key={narrative.id}
+              className="flex flex-col justify-between rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
+            >
+              <div>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-zinc-900">{narrative.title}</h3>
+                    <p className="mt-1 text-xs text-zinc-500">{narrative.description}</p>
+                  </div>
+                  <span className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-medium ${riskBadgeClasses(narrative.risk_level)}`}>
+                    {narrative.risk_level} Risk
+                  </span>
                 </div>
-                <span className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-medium ${riskBadgeClasses(narrative.risk_level)}`}>
-                  {narrative.risk_level} Risk
-                </span>
+
+                <dl className="mt-4 space-y-1.5 text-xs text-zinc-600">
+                  <div className="flex items-baseline justify-between">
+                    <dt className="text-zinc-500">Videos Analyzed:</dt>
+                    <dd className="font-medium text-zinc-900">{narrative.videos_analyzed.toLocaleString("en-US")}</dd>
+                  </div>
+                  <div className="flex items-baseline justify-between">
+                    <dt className="text-zinc-500">Total Views:</dt>
+                    <dd className="font-medium text-zinc-900">{narrative.total_views}</dd>
+                  </div>
+                  <div className="flex items-baseline justify-between">
+                    <dt className="text-zinc-500">Risk Score:</dt>
+                    <dd className="font-medium text-zinc-900">{narrative.risk_score.toFixed(1)}/10</dd>
+                  </div>
+                </dl>
               </div>
 
-              <dl className="mt-4 space-y-1.5 text-xs text-zinc-600">
-                <div className="flex items-baseline justify-between">
-                  <dt className="text-zinc-500">Videos Analyzed:</dt>
-                  <dd className="font-medium text-zinc-900">{narrative.videos_analyzed.toLocaleString("en-US")}</dd>
-                </div>
-                <div className="flex items-baseline justify-between">
-                  <dt className="text-zinc-500">Total Views:</dt>
-                  <dd className="font-medium text-zinc-900">{narrative.total_views}</dd>
-                </div>
-                <div className="flex items-baseline justify-between">
-                  <dt className="text-zinc-500">Risk Score:</dt>
-                  <dd className="font-medium text-zinc-900">{narrative.risk_score.toFixed(1)}/10</dd>
-                </div>
-              </dl>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => openNarrative(narrative)}
-              className="mt-4 inline-flex h-9 w-full cursor-pointer items-center justify-center rounded-lg bg-zinc-900 px-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 focus-visible:ring-offset-2"
-            >
-              Explore Narrative
-            </button>
-          </article>
-        ))}
-      </section>
+              <button
+                type="button"
+                onClick={() => openNarrative(narrative)}
+                className="mt-4 inline-flex h-9 w-full cursor-pointer items-center justify-center rounded-lg bg-zinc-900 px-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 focus-visible:ring-offset-2"
+              >
+                Explore Narrative
+              </button>
+            </article>
+          ))}
+        </section>
+      )}
 
       {activeNarrative && (
         <NarrativeDetailDialog narrative={activeNarrative} onClose={closeNarrative} />
@@ -245,7 +236,7 @@ function NarrativeDiscoveryInner() {
 // Modal
 // ---------------------------------------------------------------------------
 type NarrativeDetailDialogProps = {
-  narrative: Narrative;
+  narrative: NarrativeItem;
   onClose: () => void;
 };
 
@@ -309,7 +300,7 @@ function NarrativeDetailDialog({ narrative, onClose }: NarrativeDetailDialogProp
         <div className="mt-4 flex items-center justify-between gap-4">
           <div className="text-xs text-zinc-600">
             <div className="font-medium text-zinc-700">Narrative Workspace</div>
-            <div className="mt-0.5 text-zinc-500">{narrative.primary_link}</div>
+            <div className="mt-0.5 text-zinc-500">{narrative.primary_link ?? "—"}</div>
           </div>
 
           <button

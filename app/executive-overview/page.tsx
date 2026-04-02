@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import mock from "@/public/mock/mockdata.json";
 import { apiFetch } from "@/lib/api";
+import type {
+  ExecutiveOverviewResponse,
+  TopicClustersResponse,
+  TopicCluster,
+} from "@/lib/types/executive-overview";
 
 function formatNumber(value: number) {
   return Intl.NumberFormat("en-US").format(value);
@@ -21,15 +25,6 @@ type OverviewMetricCard = {
   value: number;
   subLabel: string;
   icon: "video" | "narratives" | "claims" | "alerts";
-};
-
-type OverviewStatsResponse = {
-  ok: boolean;
-  total_videos_scoped: number;
-  active_narratives: number;
-  total_claims: number;
-  verified_claims: number | null;
-  high_risk_alerts: number | null;
 };
 
 const metricLinks: Partial<Record<MetricKey, string>> = {
@@ -68,16 +63,28 @@ function MetricIcon({ kind }: { kind: OverviewMetricCard["icon"] }) {
   }
 }
 
+const SERIES_COLORS = ["#111827", "#A3A3A3", "#D4D4D4", "#6B7280"];
+
+function seriesFromData(topicTrends: Array<Record<string, string | number>>) {
+  const keys = new Set<string>();
+  for (const point of topicTrends) {
+    for (const k of Object.keys(point)) {
+      if (k !== "date") keys.add(k);
+    }
+  }
+  return Array.from(keys).map((key, i) => ({
+    key,
+    label: key,
+    color: SERIES_COLORS[i % SERIES_COLORS.length],
+  }));
+}
+
 function SimpleLineChart({ topicTrends }: { topicTrends: Array<Record<string, string | number>> }) {
   const width = 560;
   const height = 220;
   const padding = 18;
 
-  const series = [
-    { key: "AI", label: "AI", color: "#111827" },
-    { key: "Health", label: "Health", color: "#A3A3A3" },
-    { key: "Crypto", label: "Crypto", color: "#D4D4D4" },
-  ] as const;
+  const series = seriesFromData(topicTrends);
 
   const values = topicTrends.flatMap((p) =>
     series.map((s) => Number(p[s.key] ?? 0)),
@@ -105,108 +112,123 @@ function SimpleLineChart({ topicTrends }: { topicTrends: Array<Record<string, st
       </g>
 
       {series.map((s) => {
-        const points = topicTrends
-          .map((p, i) => {
-            const v = Number(p[s.key] ?? 0);
-            return `${xFor(i)},${yFor(v)}`;
-          })
-          .join(" ");
+        const coords = topicTrends.map((p, i) => ({
+          x: xFor(i),
+          y: yFor(Number(p[s.key] ?? 0)),
+        }));
         return (
-          <polyline
-            key={s.key}
-            points={points}
-            fill="none"
-            stroke={s.color}
-            strokeWidth="2.5"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
+          <g key={s.key}>
+            <polyline
+              points={coords.map((c) => `${c.x},${c.y}`).join(" ")}
+              fill="none"
+              stroke={s.color}
+              strokeWidth="2.5"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+            {coords.length === 1 && (
+              <circle cx={coords[0].x} cy={coords[0].y} r="4" fill={s.color} />
+            )}
+          </g>
         );
       })}
     </svg>
   );
 }
 
-function SimpleBubbleChart() {
+function BubbleChart({ clusters }: { clusters: TopicCluster[] }) {
+  const width = 340;
+  const height = 220;
+  const maxSize = Math.max(...clusters.map((c) => c.size), 1);
+
   return (
-    <svg viewBox="0 0 340 220" className="h-[260px] w-full" role="img" aria-label="Topic cluster bubble chart placeholder">
-      <rect x="0" y="0" width="340" height="220" rx="10" fill="#ffffff" />
-      <g opacity="0.65" fill="#D4D4D4">
-        <circle cx="110" cy="120" r="42" />
-        <circle cx="175" cy="90" r="28" />
-        <circle cx="215" cy="145" r="34" />
-        <circle cx="260" cy="105" r="18" />
-      </g>
-      <g opacity="0.85" stroke="#BDBDBD" strokeWidth="3" fill="none">
-        <path d="M132 108 L160 98 L198 132 L244 112" />
-      </g>
+    <svg viewBox={`0 0 ${width} ${height}`} className="h-[260px] w-full" role="img" aria-label="Topic cluster bubble chart">
+      <rect x="0" y="0" width={width} height={height} rx="10" fill="#ffffff" />
+      {clusters.map((c) => {
+        const r = 12 + (c.size / maxSize) * 30;
+        const cx = c.x * width;
+        const cy = c.y * height;
+        return (
+          <g key={c.label}>
+            <circle cx={cx} cy={cy} r={r} fill="#D4D4D4" opacity={0.65} />
+            <text x={cx} y={cy + r + 12} textAnchor="middle" fontSize="9" fill="#737373">
+              {c.label}
+            </text>
+          </g>
+        );
+      })}
     </svg>
   );
 }
 
 export default function ExecutiveOverviewPage() {
-  const mockData = mock.executive_overview;
-  const meta = mockData.overview_metrics_meta;
-
-  const [stats, setStats] = useState<OverviewStatsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<ExecutiveOverviewResponse | null>(null);
+  const [clusters, setClusters] = useState<TopicCluster[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    apiFetch<OverviewStatsResponse>("/overview/stats")
-      .then(setStats)
-      .catch(() => {}) // fall back to mock on error
-      .finally(() => setLoading(false));
+    Promise.all([
+      apiFetch<ExecutiveOverviewResponse>("/overview/executive"),
+      apiFetch<TopicClustersResponse>("/overview/topic-clusters"),
+    ])
+      .then(([overview, clustersRes]) => {
+        setData(overview);
+        setClusters(clustersRes.clusters);
+      })
+      .catch((err) => setError(err.message));
   }, []);
 
-  const totalVideos = stats?.total_videos_scoped ?? mockData.total_videos_scoped;
-  const activeNarratives = stats?.active_narratives ?? mockData.active_narratives;
-  const claimsValue = stats
-    ? (stats.verified_claims ?? stats.total_claims)
-    : mockData.verified_claims;
-  const claimsTitle = stats && stats.verified_claims == null ? "Total Claims" : "Verified Claims";
-  const highRiskAlerts = stats?.high_risk_alerts ?? mockData.high_risk_alerts;
+  if (error) {
+    return (
+      <div className="mx-auto w-full max-w-6xl p-8">
+        <p className="text-sm text-red-600">Failed to load overview: {error}</p>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="mx-auto w-full max-w-6xl p-8">
+        <p className="text-sm text-zinc-500">Loading...</p>
+      </div>
+    );
+  }
+
+  const meta = data.overview_metrics_meta;
 
   const overviewMetrics: OverviewMetricCard[] = [
     {
       key: "total_videos_scoped",
       title: "Total Videos Scoped",
-      value: totalVideos,
+      value: data.total_videos_scoped,
       subLabel: `+${meta.total_videos_scoped.delta_pct}% ${meta.total_videos_scoped.delta_period_label}`,
       icon: "video",
     },
     {
       key: "active_narratives",
       title: "Active Narratives",
-      value: activeNarratives,
+      value: data.active_narratives,
       subLabel: `+${meta.active_narratives.delta_new} ${meta.active_narratives.delta_period_label}`,
       icon: "narratives",
     },
     {
       key: "verified_claims",
-      title: claimsTitle,
-      value: claimsValue,
+      title: "Verified Claims",
+      value: data.verified_claims,
       subLabel: `${meta.verified_claims.accuracy_pct}% ${meta.verified_claims.accuracy_label}`,
       icon: "claims",
     },
     {
       key: "high_risk_alerts",
       title: "High-Risk Alerts",
-      value: highRiskAlerts,
+      value: data.high_risk_alerts,
       subLabel: meta.high_risk_alerts.status_label,
       icon: "alerts",
     },
   ];
 
-  const topicTrends = mockData.topic_trends as Array<Record<string, string | number>>;
-  const topicTrendsMeta = mockData.topic_trends_meta;
-
-  if (loading) {
-    return (
-      <div className="mx-auto w-full max-w-6xl p-8">
-        <p className="text-sm text-zinc-500">Loading dashboard…</p>
-      </div>
-    );
-  }
+  const topicTrends = data.topic_trends;
+  const topicTrendsMeta = data.topic_trends_meta;
 
   return (
     <div className="mx-auto w-full max-w-6xl p-8">
@@ -273,16 +295,12 @@ export default function ExecutiveOverviewPage() {
                 Last {topicTrendsMeta.window_days} days • Confidence Score: {topicTrendsMeta.confidence_score_pct}%
               </p>
             </div>
-            <div className="flex items-center gap-3 text-xs text-zinc-500">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="size-2 rounded-full bg-zinc-900" /> AI
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="size-2 rounded-full bg-zinc-400" /> Health
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="size-2 rounded-full bg-zinc-300" /> Crypto
-              </span>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
+              {seriesFromData(topicTrends).map((s) => (
+                <span key={s.key} className="inline-flex items-center gap-1.5">
+                  <span className="size-2 rounded-full" style={{ backgroundColor: s.color }} /> {s.label}
+                </span>
+              ))}
             </div>
           </div>
 
@@ -303,7 +321,7 @@ export default function ExecutiveOverviewPage() {
           </div>
 
           <div className="mt-4 rounded-lg bg-zinc-50 p-3">
-            <SimpleBubbleChart />
+            <BubbleChart clusters={clusters} />
             <div className="mt-2 text-center text-xs text-zinc-400">
               Bubble Chart: Topic Clusters
             </div>
@@ -313,4 +331,3 @@ export default function ExecutiveOverviewPage() {
     </div>
   );
 }
-
