@@ -1,15 +1,24 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import mock from "@/public/mock/mockdata.json";
 import { useNotifications } from "@/components/layout/NotificationContext";
 import { useSidebar } from "@/components/layout/SidebarContext";
+import { API_BASE } from "@/lib/api";
 
 type RiskLevel = "High" | "Medium" | "Low";
 type SortFilter = "All" | RiskLevel;
 
-const narratives = mock.narrative_discovery;
+type Narrative = {
+  id: string;
+  title: string;
+  risk_level: RiskLevel;
+  risk_score: number;
+  videos_analyzed: number;
+  total_views: string;
+  description: string;
+  time_window: string;
+};
 
 function riskBadgeClasses(level: RiskLevel) {
   switch (level) {
@@ -82,6 +91,37 @@ export default function AlertsSettingsPage() {
   const { notifHighRisk, notifMediumRisk, setNotifHighRisk, setNotifMediumRisk } = useNotifications();
   const { compactMode, setCompactMode } = useSidebar();
 
+  const [narratives, setNarratives] = useState<Narrative[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [highCount, setHighCount] = useState(0);
+  const [medCount, setMedCount] = useState(0);
+  const [lowCount, setLowCount] = useState(0);
+
+  const fetchAlerts = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/alerts`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.detail || `Request failed (${res.status})`);
+      }
+      const json = await res.json();
+      setNarratives(json.data ?? []);
+      setHighCount(json.high_count ?? 0);
+      setMedCount(json.medium_count ?? 0);
+      setLowCount(json.low_count ?? 0);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load alerts");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAlerts();
+  }, [fetchAlerts]);
 
   const filterOptions: SortFilter[] = ["All", "High", "Medium", "Low"];
 
@@ -91,11 +131,7 @@ export default function AlertsSettingsPage() {
         ? [...narratives]
         : narratives.filter((n) => n.risk_level === sortFilter);
     return base.sort((a, b) => b.risk_score - a.risk_score);
-  }, [sortFilter]);
-
-  const highCount = narratives.filter((n) => n.risk_level === "High").length;
-  const medCount  = narratives.filter((n) => n.risk_level === "Medium").length;
-  const lowCount  = narratives.filter((n) => n.risk_level === "Low").length;
+  }, [sortFilter, narratives]);
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8 p-8">
@@ -164,44 +200,68 @@ export default function AlertsSettingsPage() {
           </div>
         </div>
 
-        {/* Scrollable rows */}
-        <div className="max-h-[400px] divide-y divide-zinc-100 overflow-y-auto">
-          {filtered.map((n) => {
-            const level = n.risk_level as RiskLevel;
-            return (
-              <div
-                key={n.id}
-                className="flex items-start gap-4 px-6 py-4 transition-colors hover:bg-zinc-50"
-              >
-                <span className={`mt-1.5 size-2 shrink-0 rounded-full ${riskDot(level)}`} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-medium text-zinc-900">{n.title}</p>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${riskBadgeClasses(level)}`}
-                    >
-                      {level} Risk
-                    </span>
-                  </div>
-                  <p className="mt-0.5 line-clamp-1 text-xs text-zinc-500">{n.description}</p>
-                  <div className="mt-1.5 flex flex-wrap gap-4 text-xs text-zinc-400">
-                    <span>Score: <span className="font-medium text-zinc-600">{n.risk_score.toFixed(1)}/10</span></span>
-                    <span>Videos: <span className="font-medium text-zinc-600">{n.videos_analyzed.toLocaleString()}</span></span>
-                    <span>Views: <span className="font-medium text-zinc-600">{n.total_views}</span></span>
-                    <span>Window: <span className="font-medium text-zinc-600">{n.time_window}</span></span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => router.push(`/narrative-discovery?id=${n.id}`)}
-                  className="shrink-0 cursor-pointer rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
+        {/* Content */}
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-zinc-600" />
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <p className="text-red-600 font-semibold mb-2">Error loading alerts</p>
+            <p className="text-zinc-500 text-sm mb-4">{error}</p>
+            <button
+              onClick={fetchAlerts}
+              className="px-4 py-2 bg-zinc-900 text-white rounded-lg text-sm font-semibold hover:bg-black transition-all"
+            >
+              Retry
+            </button>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <p className="text-zinc-500 font-medium">No alerts found</p>
+            {sortFilter !== "All" && (
+              <p className="text-zinc-400 text-sm mt-1">Try selecting a different risk level</p>
+            )}
+          </div>
+        ) : (
+          <div className="max-h-[400px] divide-y divide-zinc-100 overflow-y-auto">
+            {filtered.map((n) => {
+              const level = n.risk_level as RiskLevel;
+              return (
+                <div
+                  key={n.id}
+                  className="flex items-start gap-4 px-6 py-4 transition-colors hover:bg-zinc-50"
                 >
-                  View
-                </button>
-              </div>
-            );
-          })}
-        </div>
+                  <span className={`mt-1.5 size-2 shrink-0 rounded-full ${riskDot(level)}`} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-medium text-zinc-900">{n.title}</p>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${riskBadgeClasses(level)}`}
+                      >
+                        {level} Risk
+                      </span>
+                    </div>
+                    <p className="mt-0.5 line-clamp-1 text-xs text-zinc-500">{n.description}</p>
+                    <div className="mt-1.5 flex flex-wrap gap-4 text-xs text-zinc-400">
+                      <span>Score: <span className="font-medium text-zinc-600">{n.risk_score.toFixed(1)}/10</span></span>
+                      <span>Videos: <span className="font-medium text-zinc-600">{n.videos_analyzed.toLocaleString()}</span></span>
+                      <span>Views: <span className="font-medium text-zinc-600">{n.total_views}</span></span>
+                      <span>Window: <span className="font-medium text-zinc-600">{n.time_window}</span></span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/narrative-discovery?id=${n.id}`)}
+                    className="shrink-0 cursor-pointer rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
+                  >
+                    View
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* Settings grid */}
