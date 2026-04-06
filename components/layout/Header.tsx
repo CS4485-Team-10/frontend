@@ -8,29 +8,26 @@ import { useSidebar } from "./SidebarContext";
 import { useNotifications } from "./NotificationContext";
 import { User, Settings, LogOut, Info, ChevronDown, Bell } from "lucide-react";
 
-const allNarratives = mock.narrative_discovery;
-
-function riskBadgeClasses(level: string) {
-  if (level === "High")   return "bg-red-50 text-red-700 ring-1 ring-red-100";
-  if (level === "Medium") return "bg-amber-50 text-amber-700 ring-1 ring-amber-100";
-  return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100";
+// --- TYPES ---
+interface Narrative {
+  id: string | number;
+  title: string;
+  description?: string;
+  risk_level: "High" | "Medium" | "Low";
 }
+
+const allNarratives = mock.narrative_discovery as Narrative[];
 
 export function Header() {
   const router = useRouter();
-  const { collapsed, compactMode, toggle } = useSidebar();
+  const { compactMode, toggle } = useSidebar();
   const { notifHighRisk, notifMediumRisk } = useNotifications();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isBellOpen, setIsBellOpen] = useState(false);
-  const [isNavBtnAnimating, setIsNavBtnAnimating] = useState(false);
 
   function handleGoToAlerts() {
-    setIsNavBtnAnimating(true);
-    setTimeout(() => {
-      setIsBellOpen(false);
-      setIsNavBtnAnimating(false);
-      router.push("/alerts-settings");
-    }, 300);
+    setIsBellOpen(false);
+    router.push("/alerts-settings");
   }
 
   const visibleNarratives = useMemo(() => {
@@ -89,7 +86,6 @@ export function Header() {
       {/* Right: Notifications & Profile */}
       <div className="flex items-center gap-4">
         
-        {/* Bell notification dropdown */}
         <div className="relative" ref={bellWrapRef}>
           <button
             type="button"
@@ -132,7 +128,7 @@ export function Header() {
           )}
         </div>
 
-        {/* User profile with Dropdown */}
+        {/* Profile Dropdown */}
         <div className="relative" ref={profileWrapRef}>
           <button
             type="button"
@@ -186,7 +182,7 @@ export function Header() {
                 </button>
 
                 <button 
-                  onClick={() => window.location.href = '/'} 
+                  onClick={() => { window.location.href = '/'; }} 
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
                 >
                   <LogOut className="w-4 h-4" />

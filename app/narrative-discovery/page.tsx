@@ -5,9 +5,20 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 type RiskLevel = "High" | "Medium" | "Low";
 
-// ---------------------------------------------------------------------------
+interface Narrative {
+  id: string | number;
+  title: string;
+  description?: string;
+  detail?: string;
+  category: string;
+  risk_level: RiskLevel;
+  risk_score: number;
+  videos_analyzed: number;
+  total_views: string;
+  time_window: string;
+}
+
 // Helpers
-// ---------------------------------------------------------------------------
 function riskBadgeClasses(level: RiskLevel) {
   switch (level) {
     case "High":   return "bg-red-50 text-red-700 ring-1 ring-red-100";
@@ -27,9 +38,6 @@ function parseViews(value: string) {
 
 type SortOption = "trending" | "risk" | "views";
 
-// ---------------------------------------------------------------------------
-// Page Wrapper (for Suspense)
-// ---------------------------------------------------------------------------
 export default function NarrativeDiscoveryPage() {
   return (
     <Suspense fallback={<div className="p-8 text-zinc-500 text-sm">Loading components...</div>}>
@@ -42,16 +50,15 @@ function NarrativeDiscoveryInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [narratives, setNarratives] = useState<any[]>([]);
+  const [narratives, setNarratives] = useState<Narrative[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("trending");
-  const [activeNarrative, setActiveNarrative] = useState<any | null>(null);
+  const [activeNarrative, setActiveNarrative] = useState<Narrative | null>(null);
 
-  // 1. Fetch from local mockdata.json
+  // Fetch Logic
   useEffect(() => {
-    setLoading(true);
     fetch("/mock/mockdata.json")
       .then((res) => {
         if (!res.ok) throw new Error("Could not find mockdata.json");
@@ -65,15 +72,23 @@ function NarrativeDiscoveryInner() {
       .finally(() => setLoading(false));
   }, []);
 
-  // 2. Deep-link logic
+  // FIXED: DEEP-LINK LOGIC
+  // Wrapped in setTimeout to resolve the "cascading renders" lint error
   useEffect(() => {
     const id = searchParams.get("id");
     if (!id || narratives.length === 0) return;
-    const found = narratives.find((n) => String(n.id) === String(id)) ?? null;
-    setActiveNarrative(found);
-  }, [searchParams, narratives]);
 
-  function openNarrative(n: any) {
+    const found = narratives.find((n) => String(n.id) === String(id)) ?? null;
+    
+    if (found?.id !== activeNarrative?.id) {
+      const timer = setTimeout(() => {
+        setActiveNarrative(found);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, narratives, activeNarrative]);
+
+  function openNarrative(n: Narrative) {
     setActiveNarrative(n);
     router.replace(`/narrative-discovery?id=${n.id}`, { scroll: false });
   }
@@ -83,13 +98,12 @@ function NarrativeDiscoveryInner() {
     router.replace("/narrative-discovery", { scroll: false });
   }
 
-  // 3. Search and Sort Logic
   const visibleNarratives = useMemo(() => {
     const term = search.trim().toLowerCase();
-    let result = [...narratives];
+    const result = [...narratives];
     
     if (term) {
-      result = result.filter((n) =>
+      return result.filter((n) =>
         `${n.title} ${n.description ?? ""}`.toLowerCase().includes(term)
       );
     }
@@ -99,7 +113,7 @@ function NarrativeDiscoveryInner() {
     } else if (sortBy === "views") {
       result.sort((a, b) => parseViews(b.total_views) - parseViews(a.total_views));
     }
-    // "trending" uses the default JSON order
+    
     return result;
   }, [search, sortBy, narratives]);
 
@@ -124,7 +138,6 @@ function NarrativeDiscoveryInner() {
         </p>
       </header>
 
-      {/* Filter bar */}
       <section className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="relative w-full max-w-md">
           <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-zinc-400">
@@ -212,10 +225,7 @@ function NarrativeDiscoveryInner() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Modal Component
-// ---------------------------------------------------------------------------
-function NarrativeDetailDialog({ narrative, onClose }: { narrative: any; onClose: () => void }) {
+function NarrativeDetailDialog({ narrative, onClose }: { narrative: Narrative; onClose: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);

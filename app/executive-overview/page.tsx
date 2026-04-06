@@ -3,7 +3,33 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-// Using a standard fetch since apiFetch was pointing to missing API routes
+// --- 1. ADD INTERFACES TO KILL 'ANY' ---
+interface TopicTrend {
+  date: string;
+  [key: string]: string | number; // Allows dynamic keys like "Nutrition", "AI"
+}
+
+interface Cluster {
+  label: string;
+  size: number;
+  x: number;
+  y: number;
+}
+
+interface ExecutiveData {
+  total_videos_scoped: number;
+  active_narratives: number;
+  verified_claims: number;
+  high_risk_alerts: number;
+  overview_metrics_meta: {
+    total_videos_scoped: { delta_pct: number; delta_period_label: string };
+    active_narratives: { delta_new: number; delta_period_label: string };
+    verified_claims: { accuracy_pct: number; accuracy_label: string };
+    high_risk_alerts: { status_label: string };
+  };
+  topic_trends: TopicTrend[];
+}
+
 function formatNumber(value: number) {
   return Intl.NumberFormat("en-US").format(value);
 }
@@ -60,7 +86,7 @@ function MetricIcon({ kind }: { kind: OverviewMetricCard["icon"] }) {
 
 const SERIES_COLORS = ["#111827", "#A3A3A3", "#D4D4D4", "#6B7280"];
 
-function seriesFromData(topicTrends: Array<Record<string, string | number>>) {
+function seriesFromData(topicTrends: TopicTrend[]) {
   const keys = new Set<string>();
   for (const point of topicTrends) {
     for (const k of Object.keys(point)) {
@@ -74,7 +100,7 @@ function seriesFromData(topicTrends: Array<Record<string, string | number>>) {
   }));
 }
 
-function SimpleLineChart({ topicTrends }: { topicTrends: Array<Record<string, string | number>> }) {
+function SimpleLineChart({ topicTrends }: { topicTrends: TopicTrend[] }) {
   const width = 560;
   const height = 220;
   const padding = 18;
@@ -112,7 +138,8 @@ function SimpleLineChart({ topicTrends }: { topicTrends: Array<Record<string, st
   );
 }
 
-function BubbleChart({ clusters }: { clusters: any[] }) {
+// --- 2. TYPED COMPONENT ---
+function BubbleChart({ clusters }: { clusters: Cluster[] }) {
   const width = 340;
   const height = 220;
   return (
@@ -129,8 +156,9 @@ function BubbleChart({ clusters }: { clusters: any[] }) {
 }
 
 export default function ExecutiveOverviewPage() {
-  const [data, setData] = useState<any>(null);
-  const [clusters, setClusters] = useState<any[]>([]);
+  // --- 3. TYPED STATE ---
+  const [data, setData] = useState<ExecutiveData | null>(null);
+  const [clusters, setClusters] = useState<Cluster[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -141,7 +169,6 @@ export default function ExecutiveOverviewPage() {
       })
       .then((fullData) => {
         setData(fullData.executive_overview);
-        // Default clusters since they aren't in your JSON snippet
         setClusters([
           { label: "AI", size: 40, x: 0.2, y: 0.3 },
           { label: "Health", size: 30, x: 0.7, y: 0.5 },

@@ -1,8 +1,37 @@
-import React from 'react';
-import mockData from '@/public/mock/mockdata.json';
+"use client";
+
+import React, { useEffect, useState } from 'react';
+
+// 1. DEFINE THE INTERFACE: This fixes the "creator: any" error in the card
+interface Creator {
+  handle: string;
+  risk_score: number;
+  reach: string;
+  flagged_claims: number;
+}
 
 const CreatorRiskMonitor = () => {
-  const creators = mockData.creator_risk_monitor;
+  // 2. TYPED STATE: Initialize with the Creator interface
+  const [creators, setCreators] = useState<Creator[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // 3. FETCH LOGIC: Using fetch instead of direct import to keep the build clean
+  useEffect(() => {
+    fetch("/mock/mockdata.json")
+      .then((res) => {
+        if (!res.ok) throw new Error("Could not find mockdata.json");
+        return res.json();
+      })
+      .then((fullData) => {
+        setCreators(fullData.creator_risk_monitor || []);
+        setError(null);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (error) return <div className="p-8 text-red-600">Error: {error}</div>;
 
   return (
     <div className="p-8 bg-zinc-50 min-h-screen">
@@ -32,17 +61,21 @@ const CreatorRiskMonitor = () => {
       </div>
 
       {/* Grid Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {creators.map((creator, index) => (
-          <CreatorCard key={index} creator={creator} />
-        ))}
-      </div>
+      {loading ? (
+        <p className="text-zinc-500 animate-pulse">Loading creator data...</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {creators.map((creator, index) => (
+            <CreatorCard key={index} creator={creator} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
 
-const CreatorCard = ({ creator }: { creator: any }) => {
-  // Normalize score for the gauge (if score is 1-10, multiply by 10 for percentage)
+// 4. TYPED PROPS: Replaced { creator: any } with { creator: Creator }
+const CreatorCard = ({ creator }: { creator: Creator }) => {
   const scorePercent = creator.risk_score * 10;
   
   const getRiskStatus = (score: number) => {
@@ -56,11 +89,12 @@ const CreatorCard = ({ creator }: { creator: any }) => {
   return (
     <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm flex flex-col justify-between">
       <div>
-        {/* Profile Header */}
         <div className="flex justify-between items-start mb-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-zinc-100 rounded-full flex items-center justify-center border border-zinc-200">
-              <span className="text-zinc-400 font-bold text-xl">{creator.handle[1].toUpperCase()}</span>
+              <span className="text-zinc-400 font-bold text-xl">
+                {creator.handle[1]?.toUpperCase() || "U"}
+              </span>
             </div>
             <div>
               <h3 className="font-bold text-zinc-900 leading-tight">{creator.handle}</h3>
@@ -75,12 +109,9 @@ const CreatorCard = ({ creator }: { creator: any }) => {
           </div>
         </div>
 
-        {/* Risk Gauge Visual */}
         <div className="relative flex flex-col items-center py-4 bg-zinc-50 rounded-lg mb-6 border border-zinc-100">
           <div className="relative w-36 h-20 overflow-hidden">
-            {/* Background Arch */}
             <div className="absolute top-0 w-36 h-36 border-[14px] border-zinc-200 rounded-full"></div>
-            {/* Active Progress Arch */}
             <div 
               className="absolute top-0 w-36 h-36 border-[14px] rounded-full border-transparent border-t-current border-l-current transition-all duration-1000 ease-out"
               style={{ 
@@ -95,7 +126,6 @@ const CreatorCard = ({ creator }: { creator: any }) => {
           </div>
         </div>
 
-        {/* Stats List */}
         <div className="space-y-4">
           <div className="flex justify-between items-center border-b border-zinc-50 pb-2">
             <span className="text-xs text-zinc-500 font-medium">Flagged Claims</span>
