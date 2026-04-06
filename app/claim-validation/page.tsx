@@ -2,31 +2,41 @@
 
 import { useEffect, useMemo, useState } from "react"
 
+// 1. ADD THIS INTERFACE: This kills the "Unexpected any" errors
+interface Claim {
+  claim_id: string;
+  text: string;
+  source: string;
+  status: "Verified" | "Disputed" | "Unverified";
+  confidence: string;
+}
+
 export default function ClaimValidationPage() {
-  const [claims, setClaims] = useState<any[]>([])
+  // 2. USE THE INTERFACE: Replace <any[]> with <Claim[]>
+  const [claims, setClaims] = useState<Claim[]>([])
   const [stats, setStats] = useState({ total: 0, verified: 0, disputed: 0, under_review: 0 })
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(true) // Start as true to avoid the useEffect error
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
 
   useEffect(() => {
-    setLoading(true)
-    // 1. Fetch from the unified local file
+    // 3. REMOVED setLoading(true) from here. 
+    // Since it's initialized as true above, this line is redundant and triggers a lint error.
+
     fetch("/mock/mockdata.json")
       .then((res) => {
         if (!res.ok) throw new Error("Could not find mockdata.json");
         return res.json();
       })
       .then((fullData) => {
-        const claimsData = fullData.claim_validation || [];
+        const claimsData: Claim[] = fullData.claim_validation || [];
         setClaims(claimsData);
 
-        // 2. Dynamically calculate stats based on your mock data
         const calculatedStats = {
           total: claimsData.length,
-          verified: claimsData.filter((c: any) => c.status === "Verified").length,
-          disputed: claimsData.filter((c: any) => c.status === "Disputed").length,
-          under_review: claimsData.filter((c: any) => c.status === "Unverified").length,
+          verified: claimsData.filter((c) => c.status === "Verified").length,
+          disputed: claimsData.filter((c) => c.status === "Disputed").length,
+          under_review: claimsData.filter((c) => c.status === "Unverified").length,
         };
         setStats(calculatedStats);
         setError(null);

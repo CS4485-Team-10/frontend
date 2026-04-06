@@ -14,6 +14,7 @@ import {
   Legend,
 } from "recharts";
 
+// --- 1. DEFINE INTERFACES ---
 type TopicTrend = {
   date: string;
   AI: number;
@@ -32,14 +33,29 @@ type Narrative = {
   category: string;
 };
 
+interface FullMockData {
+  executive_overview: {
+    topic_trends: TopicTrend[];
+    sentiment: {
+      positive: number;
+      neutral: number;
+      negative: number;
+    };
+    verified_claims: number;
+    active_narratives: number;
+  };
+  narrative_discovery: Narrative[];
+}
+
 export default function TrendAnalyticsPage() {
-  const [data, setData] = useState<any>(null);
+  // --- 2. UPDATE STATE TYPE ---
+  const [data, setData] = useState<FullMockData | null>(null);
   const [range, setRange] = useState("30d");
 
   useEffect(() => {
     fetch("/mock/mockdata.json")
       .then((res) => res.json())
-      .then((json) => setData(json));
+      .then((json: FullMockData) => setData(json));
   }, []);
 
   if (!data) return <div className="p-8">Loading...</div>;
@@ -54,8 +70,8 @@ export default function TrendAnalyticsPage() {
     { name: "Negative", value: sentiment.negative },
   ];
 
-  // Filter trend data based on selected range
-  const filterTrends = () => {
+  // --- 3. FIX FILTER TYPE ---
+  const filterTrends = (): TopicTrend[] => {
     const now = new Date();
     let days = 30;
 
@@ -67,7 +83,8 @@ export default function TrendAnalyticsPage() {
     const cutoff = new Date();
     cutoff.setDate(now.getDate() - days);
 
-    return trends.filter((item: any) => {
+    // Use TopicTrend type here instead of any
+    return trends.filter((item: TopicTrend) => {
       return new Date(item.date) >= cutoff;
     });
   };
@@ -76,12 +93,9 @@ export default function TrendAnalyticsPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl p-8 space-y-8">
-
       {/* HEADER */}
       <div>
-        <h2 className="text-2xl font-semibold text-zinc-900">
-          Trend Analytics
-        </h2>
+        <h2 className="text-2xl font-semibold text-zinc-900">Trend Analytics</h2>
         <p className="text-sm text-zinc-500">
           Monitor narrative growth patterns and sentiment shifts over time
         </p>
@@ -90,7 +104,6 @@ export default function TrendAnalyticsPage() {
       {/* TIME RANGE */}
       <div className="flex items-center gap-3">
         <span className="text-sm text-zinc-600">Time Range:</span>
-
         {["7d", "30d", "6m", "1y"].map((r) => (
           <button
             key={r}
@@ -105,12 +118,10 @@ export default function TrendAnalyticsPage() {
       </div>
 
       {/* CHARTS */}
-      <div className="grid grid-cols-2 gap-6">
-
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Narrative Volume */}
         <div className="bg-white border rounded-xl p-5">
           <h3 className="font-medium mb-4">Narrative Volume</h3>
-
           <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={filteredTrends}>
@@ -119,35 +130,10 @@ export default function TrendAnalyticsPage() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-
-                <Area
-                  type="monotone"
-                  dataKey="AI"
-                  stackId="1"
-                  stroke="#6366f1"
-                  fill="#6366f1"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="Health"
-                  stackId="1"
-                  stroke="#10b981"
-                  fill="#10b981"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="Crypto"
-                  stackId="1"
-                  stroke="#f59e0b"
-                  fill="#f59e0b"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="Nutrition"
-                  stackId="1"
-                  stroke="#ef4444"
-                  fill="#ef4444"
-                />
+                <Area type="monotone" dataKey="AI" stackId="1" stroke="#6366f1" fill="#6366f1" />
+                <Area type="monotone" dataKey="Health" stackId="1" stroke="#10b981" fill="#10b981" />
+                <Area type="monotone" dataKey="Crypto" stackId="1" stroke="#f59e0b" fill="#f59e0b" />
+                <Area type="monotone" dataKey="Nutrition" stackId="1" stroke="#ef4444" fill="#ef4444" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -156,7 +142,6 @@ export default function TrendAnalyticsPage() {
         {/* Sentiment Shift */}
         <div className="bg-white border rounded-xl p-5">
           <h3 className="font-medium mb-4">Sentiment Shift</h3>
-
           <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={sentimentData}>
@@ -172,27 +157,25 @@ export default function TrendAnalyticsPage() {
       </div>
 
       {/* TRENDING NARRATIVES */}
-      <div className="bg-white border rounded-xl p-6">
+      <div className="bg-white border rounded-xl p-6 overflow-x-auto">
         <h3 className="font-medium mb-4">Trending Narratives</h3>
-
         <table className="w-full text-sm">
           <thead className="text-left text-zinc-500">
             <tr>
-              <th className="pb-3">Narrative</th>
-              <th>Risk Level</th>
-              <th>Category</th>
-              <th>Views</th>
-              <th>Videos</th>
+              <th className="pb-3 pr-4">Narrative</th>
+              <th className="pb-3 pr-4">Risk Level</th>
+              <th className="pb-3 pr-4">Category</th>
+              <th className="pb-3 pr-4">Views</th>
+              <th className="pb-3">Videos</th>
             </tr>
           </thead>
-
           <tbody className="divide-y">
             {narratives.map((n) => (
               <tr key={n.id}>
-                <td className="py-3">{n.title}</td>
-                <td>{n.risk_level}</td>
-                <td>{n.category}</td>
-                <td>{n.total_views}</td>
+                <td className="py-3 pr-4">{n.title}</td>
+                <td className="pr-4">{n.risk_level}</td>
+                <td className="pr-4">{n.category}</td>
+                <td className="pr-4">{n.total_views}</td>
                 <td>{n.videos_analyzed}</td>
               </tr>
             ))}
@@ -201,34 +184,23 @@ export default function TrendAnalyticsPage() {
       </div>
 
       {/* DATA HIERARCHY */}
-      <div className="grid grid-cols-3 gap-6">
-
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div className="bg-white border rounded-xl p-6 text-center">
-          <div className="text-2xl font-semibold">
-            {data.executive_overview.verified_claims}
-          </div>
+          <div className="text-2xl font-semibold">{data.executive_overview.verified_claims}</div>
           <p className="text-sm text-zinc-500">Claims</p>
           <p className="text-xs text-zinc-400">Individual statements</p>
         </div>
-
         <div className="bg-white border rounded-xl p-6 text-center">
-          <div className="text-2xl font-semibold">
-            {data.executive_overview.active_narratives}
-          </div>
+          <div className="text-2xl font-semibold">{data.executive_overview.active_narratives}</div>
           <p className="text-sm text-zinc-500">Narratives</p>
           <p className="text-xs text-zinc-400">Grouped claims</p>
         </div>
-
         <div className="bg-white border rounded-xl p-6 text-center">
-          <div className="text-2xl font-semibold">
-            {filteredTrends.length}
-          </div>
+          <div className="text-2xl font-semibold">{filteredTrends.length}</div>
           <p className="text-sm text-zinc-500">Trend Points</p>
           <p className="text-xs text-zinc-400">Tracked over time</p>
         </div>
-
       </div>
-
     </div>
   );
 }
