@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import mock from "@/public/mock/mockdata.json";
 import { useSidebar } from "./SidebarContext";
 import { useNotifications } from "./NotificationContext";
+import { useAuth } from "./AuthContext";
 import { User, Settings, LogOut, Info, ChevronDown, Bell } from "lucide-react";
 
 // --- TYPES ---
@@ -20,6 +21,7 @@ const allNarratives = mock.narrative_discovery as Narrative[];
 
 export function Header() {
   const router = useRouter();
+  const { logout } = useAuth();
   const { compactMode, toggle } = useSidebar();
   const { notifHighRisk, notifMediumRisk } = useNotifications();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -182,7 +184,7 @@ export function Header() {
                 </button>
 
                 <button 
-                  onClick={() => { window.location.href = '/'; }} 
+                  onClick={() => { logout(); router.push("/"); }}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
                 >
                   <LogOut className="w-4 h-4" />

@@ -138,9 +138,6 @@ const CreatorCard = ({ creator }: { creator: Creator }) => {
         </div>
       </div>
 
-      <button className="w-full mt-6 bg-zinc-900 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-black transition-all active:scale-[0.98]">
-        View Detailed Audit
-      </button>
     </div>
   );
 };

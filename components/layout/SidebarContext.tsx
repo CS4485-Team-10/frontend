@@ -56,9 +56,16 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
       try { window.localStorage.setItem(COMPACT_STORAGE_KEY, String(v)); } catch { /* ignore */ }
     }
     if (v) {
+      // Turning compact ON → force-collapse
       setCollapsed(true);
       if (typeof window !== "undefined") {
         try { window.localStorage.setItem(STORAGE_KEY, "true"); } catch { /* ignore */ }
+      }
+    } else {
+      // Turning compact OFF → auto-expand so user doesn't have to click manually
+      setCollapsed(false);
+      if (typeof window !== "undefined") {
+        try { window.localStorage.setItem(STORAGE_KEY, "false"); } catch { /* ignore */ }
       }
     }
   }, []);
