@@ -2,15 +2,17 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/layout/AuthContext';
 import { Lock, Mail, ShieldCheck } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // This pushes the user to the actual dashboard
-    router.push('/executive-overview'); 
+    login();
+    router.push('/executive-overview');
   };
 
   return (
