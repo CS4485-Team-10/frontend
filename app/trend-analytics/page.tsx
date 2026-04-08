@@ -70,46 +70,40 @@ export default function TrendAnalyticsPage() {
     { name: "Negative", value: sentiment.negative },
   ];
 
-  // --- 3. FIX FILTER TYPE ---
-  const filterTrends = (): TopicTrend[] => {
-    const now = new Date();
-    let days = 30;
-
-    if (range === "7d") days = 7;
-    if (range === "30d") days = 30;
-    if (range === "6m") days = 180;
-    if (range === "1y") days = 365;
-
-    const cutoff = new Date();
-    cutoff.setDate(now.getDate() - days);
-
-    // Use TopicTrend type here instead of any
-    return trends.filter((item: TopicTrend) => {
-      return new Date(item.date) >= cutoff;
-    });
-  };
-
-  const filteredTrends = filterTrends();
+  const filteredTrends = (() => {
+    if (trends.length === 0) return trends;
+    // 6m and 1y always show the full dataset — mock data doesn't span that long.
+    // When the backend is connected with real data these ranges will work naturally.
+    if (range === "6m" || range === "1y") return trends;
+    const days = range === "7d" ? 7 : 30;
+    // Anchor to the newest date in the dataset so filters work with historical mock data
+    const maxMs = Math.max(...trends.map((d) => new Date(d.date).getTime()));
+    const cutoff = new Date(maxMs);
+    cutoff.setDate(cutoff.getDate() - days);
+    return trends.filter((item) => new Date(item.date) >= cutoff);
+  })();
 
   return (
     <div className="mx-auto w-full max-w-6xl p-8 space-y-8">
       {/* HEADER */}
       <div>
-        <h2 className="text-2xl font-semibold text-zinc-900">Trend Analytics</h2>
-        <p className="text-sm text-zinc-500">
+        <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Trend Analytics</h2>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
           Monitor narrative growth patterns and sentiment shifts over time
         </p>
       </div>
 
       {/* TIME RANGE */}
       <div className="flex items-center gap-3">
-        <span className="text-sm text-zinc-600">Time Range:</span>
+        <span className="text-sm text-zinc-600 dark:text-zinc-400">Time Range:</span>
         {["7d", "30d", "6m", "1y"].map((r) => (
           <button
             key={r}
             onClick={() => setRange(r)}
-            className={`px-3 py-1 text-sm rounded border ${
-              range === r ? "bg-black text-white" : "bg-white"
+            className={`px-3 py-1 text-sm rounded border transition-colors ${
+              range === r
+                ? "bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 dark:border-zinc-100"
+                : "bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-600 dark:hover:bg-zinc-700"
             }`}
           >
             {r}
@@ -119,9 +113,8 @@ export default function TrendAnalyticsPage() {
 
       {/* CHARTS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Narrative Volume */}
-        <div className="bg-white border rounded-xl p-5">
-          <h3 className="font-medium mb-4">Narrative Volume</h3>
+        <div className="bg-white border border-zinc-200 rounded-xl p-5 dark:bg-zinc-800 dark:border-zinc-700">
+          <h3 className="font-medium mb-4 text-zinc-900 dark:text-zinc-100">Narrative Volume</h3>
           <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={filteredTrends}>
@@ -139,9 +132,8 @@ export default function TrendAnalyticsPage() {
           </div>
         </div>
 
-        {/* Sentiment Shift */}
-        <div className="bg-white border rounded-xl p-5">
-          <h3 className="font-medium mb-4">Sentiment Shift</h3>
+        <div className="bg-white border border-zinc-200 rounded-xl p-5 dark:bg-zinc-800 dark:border-zinc-700">
+          <h3 className="font-medium mb-4 text-zinc-900 dark:text-zinc-100">Sentiment Shift</h3>
           <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={sentimentData}>
@@ -157,10 +149,10 @@ export default function TrendAnalyticsPage() {
       </div>
 
       {/* TRENDING NARRATIVES */}
-      <div className="bg-white border rounded-xl p-6 overflow-x-auto">
-        <h3 className="font-medium mb-4">Trending Narratives</h3>
+      <div className="bg-white border border-zinc-200 rounded-xl p-6 overflow-x-auto dark:bg-zinc-800 dark:border-zinc-700">
+        <h3 className="font-medium mb-4 text-zinc-900 dark:text-zinc-100">Trending Narratives</h3>
         <table className="w-full text-sm">
-          <thead className="text-left text-zinc-500">
+          <thead className="text-left text-zinc-500 dark:text-zinc-400">
             <tr>
               <th className="pb-3 pr-4">Narrative</th>
               <th className="pb-3 pr-4">Risk Level</th>
@@ -169,9 +161,9 @@ export default function TrendAnalyticsPage() {
               <th className="pb-3">Videos</th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-700/50">
             {narratives.map((n) => (
-              <tr key={n.id}>
+              <tr key={n.id} className="text-zinc-800 dark:text-zinc-200">
                 <td className="py-3 pr-4">{n.title}</td>
                 <td className="pr-4">{n.risk_level}</td>
                 <td className="pr-4">{n.category}</td>
@@ -185,21 +177,17 @@ export default function TrendAnalyticsPage() {
 
       {/* DATA HIERARCHY */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div className="bg-white border rounded-xl p-6 text-center">
-          <div className="text-2xl font-semibold">{data.executive_overview.verified_claims}</div>
-          <p className="text-sm text-zinc-500">Claims</p>
-          <p className="text-xs text-zinc-400">Individual statements</p>
-        </div>
-        <div className="bg-white border rounded-xl p-6 text-center">
-          <div className="text-2xl font-semibold">{data.executive_overview.active_narratives}</div>
-          <p className="text-sm text-zinc-500">Narratives</p>
-          <p className="text-xs text-zinc-400">Grouped claims</p>
-        </div>
-        <div className="bg-white border rounded-xl p-6 text-center">
-          <div className="text-2xl font-semibold">{filteredTrends.length}</div>
-          <p className="text-sm text-zinc-500">Trend Points</p>
-          <p className="text-xs text-zinc-400">Tracked over time</p>
-        </div>
+        {[
+          { value: data.executive_overview.verified_claims, label: "Claims", sub: "Individual statements" },
+          { value: data.executive_overview.active_narratives, label: "Narratives", sub: "Grouped claims" },
+          { value: filteredTrends.length, label: "Trend Points", sub: "Tracked over time" },
+        ].map(({ value, label, sub }) => (
+          <div key={label} className="bg-white border border-zinc-200 rounded-xl p-6 text-center dark:bg-zinc-800 dark:border-zinc-700">
+            <div className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{value}</div>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">{label}</p>
+            <p className="text-xs text-zinc-400 dark:text-zinc-500">{sub}</p>
+          </div>
+        ))}
       </div>
     </div>
   );

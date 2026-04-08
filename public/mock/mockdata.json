@@ -26,7 +26,13 @@
       { "date": "2026-03-05", "AI": 560, "Health": 415, "Crypto": 280, "Nutrition": 310 },
       { "date": "2026-03-20", "AI": 610, "Health": 490, "Crypto": 340, "Nutrition": 385 }
     ],
-    "sentiment": { "positive": 42, "neutral": 35, "negative": 23 }
+    "sentiment": { "positive": 42, "neutral": 35, "negative": 23 },
+    "topic_cluster_positions": {
+      "AI":        { "x": 0.25, "y": 0.30 },
+      "Health":    { "x": 0.68, "y": 0.52 },
+      "Crypto":    { "x": 0.38, "y": 0.75 },
+      "Nutrition": { "x": 0.78, "y": 0.22 }
+    }
   },
   "narrative_discovery": [
     {
