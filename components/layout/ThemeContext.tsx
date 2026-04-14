@@ -14,13 +14,12 @@ const ThemeContext = createContext<ThemeCtx>({ isDark: false, toggle: () => {} }
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [isDark, setIsDark] = useState(false);
 
-  // Read persisted preference once on mount (before first paint if possible)
+  // Read persisted preference once on mount; defer setState so it is not synchronous in the effect body.
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(STORAGE_KEY);
       if (stored === "dark") {
-        setIsDark(true);
-        document.documentElement.classList.add("dark");
+        queueMicrotask(() => setIsDark(true));
       }
     } catch {
       // localStorage unavailable — ignore

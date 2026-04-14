@@ -55,7 +55,6 @@ function NarrativeDiscoveryInner() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("trending");
-  const [activeNarrative, setActiveNarrative] = useState<Narrative | null>(null);
 
   // Fetch Logic
   useEffect(() => {
@@ -72,18 +71,11 @@ function NarrativeDiscoveryInner() {
       .finally(() => setLoading(false));
   }, []);
 
-  // URL is the single source of truth for which narrative is open.
-  // Only depends on searchParams + narratives — never on activeNarrative,
-  // so closing (which clears the URL) cannot accidentally re-open the dialog.
-  useEffect(() => {
+  // URL + loaded data determine which narrative is open (derived state — no effect).
+  const activeNarrative = useMemo(() => {
     const id = searchParams.get("id");
-    if (!id) {
-      setActiveNarrative(null);
-      return;
-    }
-    if (narratives.length === 0) return;
-    const found = narratives.find((n) => String(n.id) === String(id)) ?? null;
-    setActiveNarrative(found);
+    if (!id || narratives.length === 0) return null;
+    return narratives.find((n) => String(n.id) === String(id)) ?? null;
   }, [searchParams, narratives]);
 
   function openNarrative(n: Narrative) {
