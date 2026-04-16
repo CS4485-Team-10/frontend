@@ -1,7 +1,60 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import mock from "@/public/mock/mockdata.json";
+
+// --- 1. ADD INTERFACES TO KILL 'ANY' ---
+interface TopicTrend {
+  date: string;
+  [key: string]: string | number; // Allows dynamic keys like "Nutrition", "AI"
+}
+
+interface Cluster {
+  label: string;
+  size: number;
+  x: number;
+  y: number;
+}
+
+interface ExecutiveData {
+  total_videos_scoped: number;
+  active_narratives: number;
+  verified_claims: number;
+  high_risk_alerts: number;
+  overview_metrics_meta: {
+    total_videos_scoped: { delta_pct: number; delta_period_label: string };
+    active_narratives: { delta_new: number; delta_period_label: string };
+    verified_claims: { accuracy_pct: number; accuracy_label: string };
+    high_risk_alerts: { status_label: string };
+  };
+  topic_trends: TopicTrend[];
+  sentiment: { positive: number; neutral: number; negative: number };
+}
+
+interface Claim {
+  claim_id: string;
+  text: string;
+  views: string;
+  confidence: string;
+  associated_narrative: string;
+  risk_level: string;
+}
+
+type RiskLevel = "High" | "Medium" | "Low";
+
+function riskBadgeClasses(level: string) {
+  if (level === "High")   return "bg-red-50 text-red-700 ring-1 ring-red-100";
+  if (level === "Medium") return "bg-amber-50 text-amber-700 ring-1 ring-amber-100";
+  return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100";
+}
+
+function parseViews(v: string) {
+  const t = v.trim().toUpperCase();
+  const n = parseFloat(t.replace(/[MK]/g, ""));
+  if (t.endsWith("M")) return n * 1_000_000;
+  if (t.endsWith("K")) return n * 1_000;
+  return n;
+}
 
 function formatNumber(value: number) {
   return Intl.NumberFormat("en-US").format(value);
@@ -20,8 +73,6 @@ type OverviewMetricCard = {
   subLabel: string;
   icon: "video" | "narratives" | "claims" | "alerts";
 };
-
-type ExecutiveOverview = typeof mock.executive_overview;
 
 const metricLinks: Partial<Record<MetricKey, string>> = {
   active_narratives: "/narrative-discovery",
@@ -59,53 +110,48 @@ function MetricIcon({ kind }: { kind: OverviewMetricCard["icon"] }) {
   }
 }
 
-function SimpleLineChart({ topicTrends }: { topicTrends: Array<Record<string, string | number>> }) {
+const SERIES_COLORS = ["#111827", "#A3A3A3", "#D4D4D4", "#6B7280"];
+
+function seriesFromData(topicTrends: TopicTrend[]) {
+  const keys = new Set<string>();
+  for (const point of topicTrends) {
+    for (const k of Object.keys(point)) {
+      if (k !== "date") keys.add(k);
+    }
+  }
+  return Array.from(keys).map((key, i) => ({
+    key,
+    label: key,
+    color: SERIES_COLORS[i % SERIES_COLORS.length],
+  }));
+}
+
+function SimpleLineChart({ topicTrends }: { topicTrends: TopicTrend[] }) {
   const width = 560;
   const height = 220;
   const padding = 18;
-
-  const series = [
-    { key: "AI", label: "AI", color: "#111827" },
-    { key: "Health", label: "Health", color: "#A3A3A3" },
-    { key: "Crypto", label: "Crypto", color: "#D4D4D4" },
-  ] as const;
-
-  const values = topicTrends.flatMap((p) =>
-    series.map((s) => Number(p[s.key] ?? 0)),
-  );
+  const series = seriesFromData(topicTrends);
+  const values = topicTrends.flatMap((p) => series.map((s) => Number(p[s.key] ?? 0)));
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = Math.max(1, max - min);
 
-  const xFor = (i: number) =>
-    padding + (i * (width - padding * 2)) / Math.max(1, topicTrends.length - 1);
-  const yFor = (v: number) =>
-    height - padding - ((v - min) * (height - padding * 2)) / range;
+  const xFor = (i: number) => padding + (i * (width - padding * 2)) / Math.max(1, topicTrends.length - 1);
+  const yFor = (v: number) => height - padding - ((v - min) * (height - padding * 2)) / range;
 
   return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      className="h-[260px] w-full"
-      role="img"
-      aria-label="Topic trends line chart placeholder"
-    >
+    <svg viewBox={`0 0 ${width} ${height}`} className="h-[260px] w-full" role="img">
       <rect x="0" y="0" width={width} height={height} rx="10" fill="#ffffff" />
       <g opacity="0.6">
         <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="#E5E7EB" />
         <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#E5E7EB" />
       </g>
-
       {series.map((s) => {
-        const points = topicTrends
-          .map((p, i) => {
-            const v = Number(p[s.key] ?? 0);
-            return `${xFor(i)},${yFor(v)}`;
-          })
-          .join(" ");
+        const coords = topicTrends.map((p, i) => ({ x: xFor(i), y: yFor(Number(p[s.key] ?? 0)) }));
         return (
           <polyline
             key={s.key}
-            points={points}
+            points={coords.map((c) => `${c.x},${c.y}`).join(" ")}
             fill="none"
             stroke={s.color}
             strokeWidth="2.5"
@@ -118,163 +164,236 @@ function SimpleLineChart({ topicTrends }: { topicTrends: Array<Record<string, st
   );
 }
 
-function SimpleBubbleChart() {
+// --- 2. TYPED COMPONENT ---
+function BubbleChart({ clusters }: { clusters: Cluster[] }) {
+  const width = 340;
+  const height = 220;
   return (
-    <svg viewBox="0 0 340 220" className="h-[260px] w-full" role="img" aria-label="Topic cluster bubble chart placeholder">
-      <rect x="0" y="0" width="340" height="220" rx="10" fill="#ffffff" />
-      <g opacity="0.65" fill="#D4D4D4">
-        <circle cx="110" cy="120" r="42" />
-        <circle cx="175" cy="90" r="28" />
-        <circle cx="215" cy="145" r="34" />
-        <circle cx="260" cy="105" r="18" />
-      </g>
-      <g opacity="0.85" stroke="#BDBDBD" strokeWidth="3" fill="none">
-        <path d="M132 108 L160 98 L198 132 L244 112" />
-      </g>
+    <svg viewBox={`0 0 ${width} ${height}`} className="h-[260px] w-full" role="img">
+      <rect x="0" y="0" width={width} height={height} rx="10" fill="#ffffff" />
+      {clusters.map((c, i) => (
+        <g key={i}>
+          <circle cx={c.x * width} cy={c.y * height} r={12 + (c.size / 50) * 20} fill="#D4D4D4" opacity={0.65} />
+          <text x={c.x * width} y={c.y * height + 25} textAnchor="middle" fontSize="9" fill="#737373">{c.label}</text>
+        </g>
+      ))}
     </svg>
   );
 }
 
 export default function ExecutiveOverviewPage() {
-  const data = mock.executive_overview as ExecutiveOverview;
+  // --- 3. TYPED STATE ---
+  const [data, setData] = useState<ExecutiveData | null>(null);
+  const [clusters, setClusters] = useState<Cluster[]>([]);
+  const [claims, setClaims] = useState<Claim[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    fetch("/mock/mockdata.json")
+      .then((res) => {
+        if (!res.ok) throw new Error("Could not find mockdata.json in /public/mock/");
+        return res.json();
+      })
+      .then((fullData) => {
+        setData(fullData.executive_overview);
+        setClusters([
+          { label: "AI",        size: 40, x: 0.2, y: 0.3 },
+          { label: "Health",    size: 30, x: 0.7, y: 0.5 },
+          { label: "Crypto",    size: 25, x: 0.4, y: 0.8 },
+          { label: "Nutrition", size: 20, x: 0.8, y: 0.2 },
+        ]);
+        // Sort claims by view count descending — same data source as Claim Validation tab
+        const sorted = [...(fullData.claim_validation as Claim[])].sort(
+          (a, b) => parseViews(b.views) - parseViews(a.views)
+        );
+        setClaims(sorted);
+      })
+      .catch((err) => setError(err.message));
+  }, []);
+
+  if (error) return <div className="p-8 text-red-600">Failed to load: {error}</div>;
+  if (!data) return <div className="p-8 text-zinc-500">Loading...</div>;
+
+  const meta = data.overview_metrics_meta;
   const overviewMetrics: OverviewMetricCard[] = [
     {
       key: "total_videos_scoped",
       title: "Total Videos Scoped",
       value: data.total_videos_scoped,
-      subLabel: `+${data.overview_metrics_meta.total_videos_scoped.delta_pct}% ${data.overview_metrics_meta.total_videos_scoped.delta_period_label}`,
+      subLabel: `+${meta.total_videos_scoped.delta_pct}% ${meta.total_videos_scoped.delta_period_label}`,
       icon: "video",
     },
     {
       key: "active_narratives",
       title: "Active Narratives",
       value: data.active_narratives,
-      subLabel: `+${data.overview_metrics_meta.active_narratives.delta_new} ${data.overview_metrics_meta.active_narratives.delta_period_label}`,
+      subLabel: `+${meta.active_narratives.delta_new} ${meta.active_narratives.delta_period_label}`,
       icon: "narratives",
     },
     {
       key: "verified_claims",
       title: "Verified Claims",
       value: data.verified_claims,
-      subLabel: `${data.overview_metrics_meta.verified_claims.accuracy_pct}% ${data.overview_metrics_meta.verified_claims.accuracy_label}`,
+      subLabel: `${meta.verified_claims.accuracy_pct}% ${meta.verified_claims.accuracy_label}`,
       icon: "claims",
     },
     {
       key: "high_risk_alerts",
       title: "High-Risk Alerts",
       value: data.high_risk_alerts,
-      subLabel: data.overview_metrics_meta.high_risk_alerts.status_label,
+      subLabel: meta.high_risk_alerts.status_label,
       icon: "alerts",
     },
   ];
-
-  const topicTrends = data.topic_trends as Array<Record<string, string | number>>;
-  const topicTrendsMeta = data.topic_trends_meta;
 
   return (
     <div className="mx-auto w-full max-w-6xl p-8">
       <div className="mb-6">
         <h2 className="text-2xl font-semibold tracking-tight text-zinc-900">Executive Overview</h2>
-        <p className="mt-1 text-sm text-zinc-500">
-          Real-time intelligence dashboard for health narrative analysis
-        </p>
+        <p className="mt-1 text-sm text-zinc-500">Real-time intelligence dashboard for health narrative analysis</p>
       </div>
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {overviewMetrics.map((m) => {
           const href = metricLinks[m.key];
-          const cardClassName =
-            "rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_0_rgba(0,0,0,0.04)] transition-colors";
-          const interactiveClassName =
-            "hover:border-zinc-300 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5F5F5]";
-
           const content = (
             <>
               <div className="flex items-start justify-between gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-zinc-900">
-                  <MetricIcon kind={m.icon} />
-                </div>
+                <div className="flex size-10 items-center justify-center rounded-lg bg-zinc-900"><MetricIcon kind={m.icon} /></div>
                 <span className="text-xs font-medium text-zinc-500">{m.subLabel}</span>
               </div>
-
               <div className="mt-4">
-                <div className="text-3xl font-semibold tracking-tight text-zinc-900">
-                  {formatNumber(m.value)}
-                </div>
+                <div className="text-3xl font-semibold tracking-tight text-zinc-900">{formatNumber(m.value)}</div>
                 <div className="mt-1 text-sm text-zinc-500">{m.title}</div>
               </div>
             </>
           );
-
+          const className = "rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]";
           return href ? (
-            <Link
-              key={m.key}
-              href={href}
-              className={`${cardClassName} ${interactiveClassName}`}
-              aria-label={`Go to ${m.title}`}
-            >
-              {content}
-            </Link>
+            <Link key={m.key} href={href} className={`${className} hover:bg-zinc-50 transition-colors`}>{content}</Link>
           ) : (
-            <div key={m.key} className={cardClassName}>
-              {content}
-            </div>
+            <div key={m.key} className={className}>{content}</div>
           );
         })}
       </section>
 
       <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Link
-          href="/trend-analytics"
-          className="rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_0_rgba(0,0,0,0.04)] transition-colors hover:border-zinc-300 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5F5F5] lg:col-span-2"
-          aria-label="Go to Trend Analytics"
-        >
-          <div className="flex items-start justify-between gap-4">
+        <div className="lg:col-span-2 rounded-xl border border-zinc-200 bg-white p-5">
+          <h3 className="text-sm font-semibold text-zinc-900">Topic Trends Over Time</h3>
+          <div className="mt-4 rounded-lg bg-zinc-50 p-3"><SimpleLineChart topicTrends={data.topic_trends} /></div>
+        </div>
+        <div className="rounded-xl border border-zinc-200 bg-white p-5">
+          <h3 className="text-sm font-semibold text-zinc-900">Topic Clusters</h3>
+          <div className="mt-4 rounded-lg bg-zinc-50 p-3"><BubbleChart clusters={clusters} /></div>
+        </div>
+      </section>
+
+      {/* Frequent Claims & Risks + Sentiment Analysis */}
+      <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+
+        {/* Claims table — same data as Claim Validation tab */}
+        <div className="lg:col-span-2 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-[0_1px_0_rgba(0,0,0,0.04)]">
+          <div className="flex items-center justify-between border-b border-zinc-100 px-6 py-4">
             <div>
-              <h3 className="text-sm font-semibold text-zinc-900">Topic Trends Over Time</h3>
-              <p className="mt-0.5 text-xs text-zinc-500">
-                Last {topicTrendsMeta.window_days} days • Confidence Score: {topicTrendsMeta.confidence_score_pct}%
-              </p>
+              <h3 className="text-sm font-semibold text-zinc-900">Frequent Claims &amp; Risks</h3>
+              <p className="mt-0.5 text-xs text-zinc-500">Sorted by view count • LLM transparency enabled</p>
             </div>
-            <div className="flex items-center gap-3 text-xs text-zinc-500">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="size-2 rounded-full bg-zinc-900" /> AI
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="size-2 rounded-full bg-zinc-400" /> Health
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="size-2 rounded-full bg-zinc-300" /> Crypto
-              </span>
-            </div>
+            <Link
+              href="/claim-validation"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-3.5" aria-hidden>
+                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+              </svg>
+              Export
+            </Link>
           </div>
 
-          <div className="mt-4 rounded-lg bg-zinc-50 p-3">
-            <SimpleLineChart topicTrends={topicTrends} />
-            <div className="mt-2 text-center text-xs text-zinc-400">
-              Line Chart: Topic Trends Visualization
-            </div>
+          {/* Sticky header */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-zinc-100 text-xs font-semibold text-zinc-500">
+                  <th className="px-6 py-3 text-left">Claim Text</th>
+                  <th className="px-4 py-3 text-left">Associated Narrative</th>
+                  <th className="px-4 py-3 text-right">View Count</th>
+                  <th className="px-4 py-3 text-center">Risk Level</th>
+                  <th className="px-4 py-3 text-right">Confidence</th>
+                </tr>
+              </thead>
+            </table>
           </div>
-        </Link>
 
-        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]">
-          <div>
-            <h3 className="text-sm font-semibold text-zinc-900">Topic Cluster</h3>
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Semantic relationships • Source tracing enabled
-            </p>
-          </div>
-
-          <div className="mt-4 rounded-lg bg-zinc-50 p-3">
-            <SimpleBubbleChart />
-            <div className="mt-2 text-center text-xs text-zinc-400">
-              Bubble Chart: Topic Clusters
-            </div>
+          {/* Scrollable body */}
+          <div className="max-h-[300px] overflow-y-auto overflow-x-auto">
+            <table className="w-full text-sm">
+              <tbody className="divide-y divide-zinc-100">
+                {claims.map((claim) => (
+                  <tr key={claim.claim_id} className="transition-colors hover:bg-zinc-50">
+                    <td className="max-w-[220px] px-6 py-3.5 text-xs text-zinc-700">{claim.text}</td>
+                    <td className="whitespace-nowrap px-4 py-3.5 text-xs text-zinc-500">{claim.associated_narrative}</td>
+                    <td className="whitespace-nowrap px-4 py-3.5 text-right text-xs font-medium text-zinc-900">{claim.views}</td>
+                    <td className="px-4 py-3.5 text-center">
+                      {claim.risk_level && (
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${riskBadgeClasses(claim.risk_level as RiskLevel)}`}>
+                          {claim.risk_level}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <div className="h-1.5 w-16 overflow-hidden rounded-full bg-zinc-100">
+                          <div className="h-full rounded-full bg-zinc-700" style={{ width: claim.confidence }} />
+                        </div>
+                        <span className="w-8 text-right text-xs text-zinc-500">{claim.confidence}</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
+
+        {/* Sentiment Analysis — same data as Trend Analytics tab */}
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-[0_1px_0_rgba(0,0,0,0.04)]">
+          <h3 className="text-sm font-semibold text-zinc-900">Sentiment Analysis</h3>
+          <p className="mt-0.5 text-xs text-zinc-500">Health domain overview</p>
+
+          <div className="mt-5 space-y-4">
+            {(
+              [
+                { label: "Positive", value: data.sentiment.positive, color: "bg-zinc-900" },
+                { label: "Neutral",  value: data.sentiment.neutral,  color: "bg-zinc-400" },
+                { label: "Negative", value: data.sentiment.negative, color: "bg-zinc-300" },
+              ] as const
+            ).map(({ label, value, color }) => (
+              <div key={label}>
+                <div className="mb-1.5 flex items-center justify-between text-xs">
+                  <span className="font-medium text-zinc-700">{label}</span>
+                  <span className="font-semibold text-zinc-900">{value}%</span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
+                  <div className={`h-full rounded-full ${color} transition-all duration-700`} style={{ width: `${value}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 border-t border-zinc-100 pt-4">
+            <p className="text-xs font-medium text-zinc-500">Overall Signal</p>
+            <p className="mt-1 text-sm font-semibold text-zinc-900">
+              {data.sentiment.positive > 50 ? "Predominantly Positive"
+                : data.sentiment.negative > 35 ? "High Negative Signal"
+                : "Mixed — Monitor Closely"}
+            </p>
+            <p className="mt-0.5 text-xs text-zinc-400">
+              Based on {formatNumber(data.verified_claims)} verified claims
+            </p>
+          </div>
+        </div>
+
       </section>
     </div>
   );
 }
-

@@ -6,7 +6,7 @@ import { useSidebar } from "./SidebarContext";
 
 const navItems = [
   {
-    href: "/",
+    href: "/executive-overview",
     label: "Executive Overview",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-5 shrink-0">
@@ -77,9 +77,7 @@ export function Sidebar() {
         className="flex flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden p-2 pt-2"
       >
         {navItems.map((item) => {
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/" && pathname.startsWith(item.href));
+          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <Link
               key={item.href}

@@ -132,7 +132,6 @@ const CreatorCard = ({ creator }: { creator: Creator }) => {
   return (
     <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm flex flex-col justify-between">
       <div>
-        {/* Profile Header */}
         <div className="flex justify-between items-start mb-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-zinc-100 rounded-full flex items-center justify-center border border-zinc-200">
@@ -151,7 +150,6 @@ const CreatorCard = ({ creator }: { creator: Creator }) => {
           </div>
         </div>
 
-        {/* Risk Gauge Visual */}
         <div className="relative flex flex-col items-center py-4 bg-zinc-50 rounded-lg mb-6 border border-zinc-100">
           <div className="relative w-36 h-20 overflow-hidden">
             <div className="absolute top-0 w-36 h-36 border-[14px] border-zinc-200 rounded-full"></div>
@@ -169,7 +167,6 @@ const CreatorCard = ({ creator }: { creator: Creator }) => {
           </div>
         </div>
 
-        {/* Stats List */}
         <div className="space-y-4">
           <div className="flex justify-between items-center border-b border-zinc-50 pb-2">
             <span className="text-xs text-zinc-500 font-medium">Flagged Claims</span>
@@ -182,9 +179,6 @@ const CreatorCard = ({ creator }: { creator: Creator }) => {
         </div>
       </div>
 
-      <button className="w-full mt-6 bg-zinc-900 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-black transition-all active:scale-[0.98]">
-        View Detailed Audit
-      </button>
     </div>
   );
 };
