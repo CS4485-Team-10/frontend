@@ -11,6 +11,7 @@ import {
   CartesianGrid,
   Legend,
 } from "recharts";
+import { useTheme } from "@/components/layout/ThemeContext";
 import { apiFetch } from "@/lib/api";
 import type { ExecutiveOverviewResponse } from "@/lib/types/executive-overview";
 import type { NarrativeListResponse, NarrativeItem } from "@/lib/types/narrative";
@@ -30,6 +31,7 @@ function topicKeys(trends: TopicTrend[]): string[] {
 }
 
 export default function TrendAnalyticsPage() {
+  const { isDark } = useTheme();
   const [execData, setExecData] = useState<ExecutiveOverviewResponse | null>(null);
   const [narratives, setNarratives] = useState<NarrativeItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,37 +67,44 @@ export default function TrendAnalyticsPage() {
 
   const series = useMemo(() => topicKeys(filteredTrends), [filteredTrends]);
 
+  const gridColor = isDark ? "#374151" : "#e5e7eb";
+  const axisTick = isDark ? "#9ca3af" : "#6b7280";
+  const tooltipBg = isDark ? "#1f2937" : "#ffffff";
+  const tooltipBorder = isDark ? "#374151" : "#e5e7eb";
+  const tooltipText = isDark ? "#f4f4f5" : "#18181b";
+
   if (error) {
     return (
       <div className="p-8">
-        <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
-          <p className="text-sm text-red-600 font-medium">Failed to load: {error}</p>
-          <p className="text-xs text-red-500 mt-1">Check that the backend API is running.</p>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/30">
+          <p className="text-sm font-medium text-red-600 dark:text-red-400">Failed to load: {error}</p>
+          <p className="mt-1 text-xs text-red-500 dark:text-red-400/80">Check that the backend API is running.</p>
         </div>
       </div>
     );
   }
-  if (loading || !execData) return <div className="p-8 text-zinc-500">Loading...</div>;
+  if (loading || !execData) {
+    return <div className="p-8 text-zinc-500 dark:text-zinc-400">Loading...</div>;
+  }
 
   return (
-    <div className="mx-auto w-full max-w-6xl p-8 space-y-8">
-      {/* HEADER */}
+    <div className="mx-auto w-full max-w-6xl space-y-8 p-8">
       <div>
-        <h2 className="text-2xl font-semibold text-zinc-900">Trend Analytics</h2>
-        <p className="text-sm text-zinc-500">
-          Monitor narrative growth patterns and sentiment shifts over time
-        </p>
+        <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Trend Analytics</h2>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">Monitor narrative growth patterns and sentiment shifts over time</p>
       </div>
 
-      {/* TIME RANGE */}
       <div className="flex items-center gap-3">
-        <span className="text-sm text-zinc-600">Time Range:</span>
+        <span className="text-sm text-zinc-600 dark:text-zinc-400">Time Range:</span>
         {["7d", "30d", "6m", "1y"].map((r) => (
           <button
             key={r}
+            type="button"
             onClick={() => setRange(r)}
-            className={`px-3 py-1 text-sm rounded border ${
-              range === r ? "bg-black text-white" : "bg-white"
+            className={`rounded border px-3 py-1 text-sm transition-colors ${
+              range === r
+                ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
+                : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
             }`}
           >
             {r}
@@ -103,19 +112,25 @@ export default function TrendAnalyticsPage() {
         ))}
       </div>
 
-      {/* CHARTS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Narrative Volume */}
-        <div className="bg-white border rounded-xl p-5">
-          <h3 className="font-medium mb-4">Narrative Volume</h3>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-800">
+          <h3 className="mb-4 font-medium text-zinc-900 dark:text-zinc-100">Narrative Volume</h3>
           <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={filteredTrends}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis dataKey="date" tick={{ fill: axisTick, fontSize: 12 }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fill: axisTick, fontSize: 12 }} tickLine={false} axisLine={false} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: tooltipBg,
+                    border: `1px solid ${tooltipBorder}`,
+                    borderRadius: 8,
+                    color: tooltipText,
+                    fontSize: 12,
+                  }}
+                />
+                <Legend wrapperStyle={{ color: axisTick, fontSize: 12 }} />
                 {series.map((key, i) => (
                   <Area
                     key={key}
@@ -131,19 +146,17 @@ export default function TrendAnalyticsPage() {
           </div>
         </div>
 
-        {/* Sentiment Shift — API not yet available */}
-        <div className="bg-white border rounded-xl p-5 flex flex-col items-center justify-center">
-          <h3 className="font-medium mb-2">Sentiment Shift</h3>
-          <p className="text-sm text-zinc-400">Sentiment analysis endpoint coming soon.</p>
-          <p className="text-xs text-zinc-300 mt-1">See docs/MISSING_APIS.md for details.</p>
+        <div className="flex flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-800">
+          <h3 className="mb-2 font-medium text-zinc-900 dark:text-zinc-100">Sentiment Shift</h3>
+          <p className="text-sm text-zinc-400 dark:text-zinc-500">Sentiment analysis endpoint coming soon.</p>
+          <p className="mt-1 text-xs text-zinc-300 dark:text-zinc-600">See docs/MISSING_APIS.md for details.</p>
         </div>
       </div>
 
-      {/* TRENDING NARRATIVES */}
-      <div className="bg-white border rounded-xl p-6 overflow-x-auto">
-        <h3 className="font-medium mb-4">Trending Narratives</h3>
+      <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800">
+        <h3 className="mb-4 font-medium text-zinc-900 dark:text-zinc-100">Trending Narratives</h3>
         <table className="w-full text-sm">
-          <thead className="text-left text-zinc-500">
+          <thead className="text-left text-zinc-500 dark:text-zinc-400">
             <tr>
               <th className="pb-3 pr-4">Narrative</th>
               <th className="pb-3 pr-4">Risk Level</th>
@@ -152,9 +165,9 @@ export default function TrendAnalyticsPage() {
               <th className="pb-3">Videos</th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-700/50">
             {narratives.map((n) => (
-              <tr key={n.id}>
+              <tr key={n.id} className="text-zinc-800 dark:text-zinc-200">
                 <td className="py-3 pr-4">{n.title}</td>
                 <td className="pr-4">{n.risk_level}</td>
                 <td className="pr-4">{n.category}</td>
@@ -166,22 +179,21 @@ export default function TrendAnalyticsPage() {
         </table>
       </div>
 
-      {/* DATA HIERARCHY */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div className="bg-white border rounded-xl p-6 text-center">
-          <div className="text-2xl font-semibold">{execData.verified_claims}</div>
-          <p className="text-sm text-zinc-500">Claims</p>
-          <p className="text-xs text-zinc-400">Individual statements</p>
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 text-center dark:border-zinc-700 dark:bg-zinc-800">
+          <div className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{execData.verified_claims}</div>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">Claims</p>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500">Individual statements</p>
         </div>
-        <div className="bg-white border rounded-xl p-6 text-center">
-          <div className="text-2xl font-semibold">{execData.active_narratives}</div>
-          <p className="text-sm text-zinc-500">Narratives</p>
-          <p className="text-xs text-zinc-400">Grouped claims</p>
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 text-center dark:border-zinc-700 dark:bg-zinc-800">
+          <div className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{execData.active_narratives}</div>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">Narratives</p>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500">Grouped claims</p>
         </div>
-        <div className="bg-white border rounded-xl p-6 text-center">
-          <div className="text-2xl font-semibold">{filteredTrends.length}</div>
-          <p className="text-sm text-zinc-500">Trend Points</p>
-          <p className="text-xs text-zinc-400">Tracked over time</p>
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 text-center dark:border-zinc-700 dark:bg-zinc-800">
+          <div className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{filteredTrends.length}</div>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">Trend Points</p>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500">Tracked over time</p>
         </div>
       </div>
     </div>

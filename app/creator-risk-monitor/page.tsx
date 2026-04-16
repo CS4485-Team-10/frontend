@@ -45,30 +45,30 @@ const CreatorRiskMonitor = () => {
   }, [fetchCreators, narrative]);
 
   return (
-    <div className="p-8 bg-zinc-50 min-h-screen">
+    <div className="p-8 bg-zinc-50 dark:bg-zinc-950 min-h-screen">
       {/* Header Section */}
       <div className="flex justify-between items-end mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">Creator Risk Monitor</h1>
-          <p className="text-zinc-500 mt-1">Assess and track high-risk content creators based on flagged health claims.</p>
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">Creator Risk Monitor</h1>
+          <p className="text-zinc-500 dark:text-zinc-400 mt-1">Assess and track high-risk content creators based on flagged health claims.</p>
         </div>
         <div className="flex gap-3">
           <div className="flex flex-col">
-            <label className="text-[10px] font-bold text-zinc-400 uppercase ml-1 mb-1">Filter by Narrative</label>
+            <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase ml-1 mb-1">Filter by Narrative</label>
             <input
               type="text"
               value={narrative}
               onChange={(e) => setNarrative(e.target.value)}
               placeholder="e.g. Ozempic, COVID…"
-              className="border border-zinc-200 rounded-lg px-3 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-zinc-200 w-52"
+              className="w-52 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:placeholder:text-zinc-500 dark:focus:ring-zinc-500"
             />
           </div>
           <div className="flex flex-col">
-            <label className="text-[10px] font-bold text-zinc-400 uppercase ml-1 mb-1">Sort Order</label>
+            <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase ml-1 mb-1">Sort Order</label>
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value)}
-              className="border border-zinc-200 rounded-lg px-3 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-zinc-200"
+              className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-200 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:focus:ring-zinc-500"
             >
               {SORT_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -81,24 +81,25 @@ const CreatorRiskMonitor = () => {
       {/* Content */}
       {loading ? (
         <div className="flex items-center justify-center py-32">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-zinc-600" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-zinc-600 dark:border-zinc-700 dark:border-t-zinc-300" />
         </div>
       ) : error ? (
         <div className="flex flex-col items-center justify-center py-32 text-center">
-          <p className="text-red-600 font-semibold mb-2">Error loading creators</p>
-          <p className="text-zinc-500 text-sm mb-4">{error}</p>
+          <p className="mb-2 font-semibold text-red-600 dark:text-red-400">Error loading creators</p>
+          <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">{error}</p>
           <button
+            type="button"
             onClick={fetchCreators}
-            className="px-4 py-2 bg-zinc-900 text-white rounded-lg text-sm font-semibold hover:bg-black transition-all"
+            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-black dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
           >
             Retry
           </button>
         </div>
       ) : creators.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-32 text-center">
-          <p className="text-zinc-500 font-medium">No creators found</p>
+          <p className="font-medium text-zinc-500 dark:text-zinc-400">No creators found</p>
           {narrative && (
-            <p className="text-zinc-400 text-sm mt-1">Try a different narrative filter</p>
+            <p className="mt-1 text-sm text-zinc-400 dark:text-zinc-500">Try a different narrative filter</p>
           )}
         </div>
       ) : (
@@ -124,51 +125,53 @@ const CreatorCard = ({ creator }: { creator: Creator }) => {
   const status = getRiskStatus(creator.risk_score);
 
   return (
-    <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm flex flex-col justify-between">
+    <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm flex flex-col justify-between dark:bg-zinc-800 dark:border-zinc-700">
       <div>
         <div className="flex justify-between items-start mb-6">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-zinc-100 rounded-full flex items-center justify-center border border-zinc-200">
-              <span className="text-zinc-400 font-bold text-xl">{creator.handle[1]?.toUpperCase() ?? "?"}</span>
+            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-700">
+              <span className="text-xl font-bold text-zinc-400 dark:text-zinc-300">
+                {creator.handle[1]?.toUpperCase() ?? "?"}
+              </span>
             </div>
             <div>
-              <h3 className="font-bold text-zinc-900 leading-tight">{creator.handle}</h3>
+              <h3 className="font-bold text-zinc-900 leading-tight dark:text-zinc-100">{creator.handle}</h3>
               <div className={`mt-1 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${status.bg} ${status.color} ${status.border}`}>
                 {status.label}
               </div>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-[10px] font-bold text-zinc-400 uppercase">Reach</p>
-            <p className="text-sm font-bold text-zinc-900">{creator.reach}</p>
+            <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase">Reach</p>
+            <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{creator.reach}</p>
           </div>
         </div>
 
-        <div className="relative flex flex-col items-center py-4 bg-zinc-50 rounded-lg mb-6 border border-zinc-100">
+        <div className="relative flex flex-col items-center py-4 bg-zinc-50 rounded-lg mb-6 border border-zinc-100 dark:bg-zinc-900/50 dark:border-zinc-700">
           <div className="relative w-36 h-20 overflow-hidden">
-            <div className="absolute top-0 w-36 h-36 border-[14px] border-zinc-200 rounded-full"></div>
+            <div className="absolute top-0 h-36 w-36 rounded-full border-[14px] border-zinc-200 dark:border-zinc-700" />
             <div
-              className="absolute top-0 w-36 h-36 border-[14px] rounded-full border-transparent border-t-current border-l-current transition-all duration-1000 ease-out"
+              className="absolute top-0 h-36 w-36 rounded-full border-[14px] border-transparent border-t-current border-l-current transition-all duration-1000 ease-out"
               style={{
                 color: creator.risk_score >= 8 ? "#ef4444" : creator.risk_score >= 5 ? "#f59e0b" : "#10b981",
                 transform: `rotate(${(scorePercent / 100) * 180 - 45}deg)`,
               }}
-            ></div>
+            />
           </div>
           <div className="mt-2 text-center">
-            <span className="text-3xl font-black text-zinc-900">{creator.risk_score}</span>
-            <span className="text-zinc-400 font-medium ml-1">/ 10</span>
+            <span className="text-3xl font-black text-zinc-900 dark:text-zinc-100">{creator.risk_score}</span>
+            <span className="text-zinc-400 dark:text-zinc-500 font-medium ml-1">/ 10</span>
           </div>
         </div>
 
         <div className="space-y-4">
-          <div className="flex justify-between items-center border-b border-zinc-50 pb-2">
-            <span className="text-xs text-zinc-500 font-medium">Flagged Claims</span>
-            <span className="text-sm font-bold text-zinc-900">{creator.flagged_claims}</span>
+          <div className="flex justify-between items-center border-b border-zinc-50 pb-2 dark:border-zinc-700/50">
+            <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Flagged Claims</span>
+            <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{creator.flagged_claims}</span>
           </div>
-          <div className="flex justify-between items-center border-b border-zinc-50 pb-2">
-            <span className="text-xs text-zinc-500 font-medium">Verification Status</span>
-            <span className="text-xs font-bold text-zinc-400 uppercase">Awaiting Manual Audit</span>
+          <div className="flex justify-between items-center border-b border-zinc-50 pb-2 dark:border-zinc-700/50">
+            <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Verification Status</span>
+            <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase">Awaiting Manual Audit</span>
           </div>
         </div>
       </div>

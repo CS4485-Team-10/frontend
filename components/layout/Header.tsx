@@ -8,6 +8,7 @@ import type { AlertListResponse, AlertItem } from "@/lib/types/alert";
 import { useSidebar } from "./SidebarContext";
 import { useNotifications } from "./NotificationContext";
 import { useAuth } from "./AuthContext";
+import { useTheme } from "./ThemeContext";
 import { User, Settings, LogOut, Info, ChevronDown, Bell } from "lucide-react";
 
 export function Header() {
@@ -15,6 +16,7 @@ export function Header() {
   const { logout } = useAuth();
   const { compactMode, toggle } = useSidebar();
   const { notifHighRisk, notifMediumRisk } = useNotifications();
+  const { isDark, toggle: toggleTheme } = useTheme();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isBellOpen, setIsBellOpen] = useState(false);
   const [allAlerts, setAllAlerts] = useState<AlertItem[]>([]);
@@ -83,9 +85,29 @@ export function Header() {
         </Link>
       </div>
 
-      {/* Right: Notifications & Profile */}
+      {/* Right: Theme toggle + Notifications + Profile */}
       <div className="flex items-center gap-4">
-        
+
+        {/* Sun / Moon toggle */}
+        <button
+          type="button"
+          onClick={toggleTheme}
+          aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          className="cursor-pointer rounded p-1.5 text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+        >
+          {isDark ? (
+            /* Sun icon */
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-5" aria-hidden>
+              <path d="M12 7a5 5 0 1 0 0 10A5 5 0 0 0 12 7zM2 13h2a1 1 0 0 0 0-2H2a1 1 0 0 0 0 2zm18 0h2a1 1 0 0 0 0-2h-2a1 1 0 0 0 0 2zM11 2v2a1 1 0 0 0 2 0V2a1 1 0 0 0-2 0zm0 18v2a1 1 0 0 0 2 0v-2a1 1 0 0 0-2 0zM5.99 4.58a1 1 0 0 0-1.41 1.41l1.06 1.06a1 1 0 0 0 1.41-1.41L5.99 4.58zm12.37 12.37a1 1 0 0 0-1.41 1.41l1.06 1.06a1 1 0 0 0 1.41-1.41l-1.06-1.06zm1.06-10.96a1 1 0 0 0-1.41-1.41l-1.06 1.06a1 1 0 0 0 1.41 1.41l1.06-1.06zM7.05 18.36a1 1 0 0 0-1.41-1.41l-1.06 1.06a1 1 0 0 0 1.41 1.41l1.06-1.06z"/>
+            </svg>
+          ) : (
+            /* Moon icon */
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-5" aria-hidden>
+              <path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/>
+            </svg>
+          )}
+        </button>
+
         <div className="relative" ref={bellWrapRef}>
           <button
             type="button"
@@ -101,26 +123,26 @@ export function Header() {
           </button>
 
           {isBellOpen && (
-            <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lg animate-in fade-in zoom-in duration-150">
-              <div className="border-b border-zinc-100 px-4 py-3">
-                <p className="text-sm font-semibold text-zinc-900">Notifications</p>
-                <p className="text-xs text-zinc-500">{badgeCount} narrative alert{badgeCount !== 1 ? "s" : ""} detected</p>
+            <div className="dropdown-enter absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+              <div className="border-b border-zinc-100 px-4 py-3 dark:border-zinc-700">
+                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Notifications</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">{badgeCount} narrative alert{badgeCount !== 1 ? "s" : ""} detected</p>
               </div>
-              <div className="max-h-72 divide-y divide-zinc-100 overflow-y-auto">
+              <div className="max-h-72 divide-y divide-zinc-100 overflow-y-auto dark:divide-zinc-700">
                 {visibleNarratives.length === 0 ? (
-                  <p className="px-4 py-4 text-center text-xs text-zinc-400">No active alerts</p>
+                  <p className="px-4 py-4 text-center text-xs text-zinc-400 dark:text-zinc-500">No active alerts</p>
                 ) : visibleNarratives.map((n) => (
-                  <div key={n.id} className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-zinc-50">
+                  <div key={n.id} className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800">
                     <span className={`mt-1 size-2 shrink-0 rounded-full ${n.risk_level === "High" ? "bg-red-500" : "bg-amber-400"}`} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-zinc-900 line-clamp-1">{n.title}</p>
-                      <p className="mt-0.5 line-clamp-2 text-xs text-zinc-500">{n.description}</p>
+                      <p className="text-sm font-medium text-zinc-900 line-clamp-1 dark:text-zinc-100">{n.title}</p>
+                      <p className="mt-0.5 line-clamp-2 text-xs text-zinc-500 dark:text-zinc-400">{n.description}</p>
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="border-t border-zinc-100 px-4 py-2.5">
-                <button onClick={handleGoToAlerts} className="w-full rounded-lg bg-zinc-900 py-2 text-center text-xs font-medium text-white hover:bg-zinc-800">
+              <div className="border-t border-zinc-100 px-4 py-2.5 dark:border-zinc-700">
+                <button onClick={handleGoToAlerts} className="w-full rounded-lg bg-zinc-900 py-2 text-center text-xs font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white">
                   View All Alerts
                 </button>
               </div>
@@ -146,44 +168,44 @@ export function Header() {
           </button>
 
           {isProfileOpen && (
-            <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-2xl z-[100] animate-in fade-in zoom-in duration-150">
-              <div className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50">
-                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Signed in as</p>
-                <p className="text-sm font-bold text-zinc-900">admin@cs4485.com</p>
+            <div className="dropdown-enter absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-2xl z-[100] dark:border-zinc-700 dark:bg-zinc-900">
+              <div className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 dark:border-zinc-700 dark:bg-zinc-800/50">
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest dark:text-zinc-500">Signed in as</p>
+                <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">admin@cs4485.com</p>
               </div>
 
               <div className="py-1">
-                <button 
+                <button
                   onClick={() => { setIsProfileOpen(false); router.push('/profile'); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors dark:text-zinc-300 dark:hover:bg-zinc-800"
                 >
-                  <User className="w-4 h-4 text-zinc-500" />
+                  <User className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                   Account Information
                 </button>
 
-                <button 
+                <button
                   onClick={() => { setIsProfileOpen(false); router.push('/alerts-settings'); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors dark:text-zinc-300 dark:hover:bg-zinc-800"
                 >
-                  <Settings className="w-4 h-4 text-zinc-500" />
+                  <Settings className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                   System Settings
                 </button>
               </div>
 
-              <div className="h-px bg-zinc-100 mx-2" />
+              <div className="h-px bg-zinc-100 mx-2 dark:bg-zinc-700" />
 
               <div className="py-1">
-                <button 
+                <button
                   onClick={() => { setIsProfileOpen(false); router.push('/help'); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors dark:text-zinc-300 dark:hover:bg-zinc-800"
                 >
-                  <Info className="w-4 h-4 text-zinc-500" />
-                  Help & Support
+                  <Info className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                  Help &amp; Support
                 </button>
 
-                <button 
+                <button
                   onClick={() => { logout(); router.push("/"); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors dark:hover:bg-red-950/40"
                 >
                   <LogOut className="w-4 h-4" />
                   Sign Out

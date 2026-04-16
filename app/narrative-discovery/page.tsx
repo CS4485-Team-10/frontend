@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import type { NarrativeListResponse, NarrativeItem } from "@/lib/types/narrative";
@@ -37,7 +37,6 @@ function NarrativeDiscoveryInner() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("trending");
-  const [activeNarrative, setActiveNarrative] = useState<NarrativeItem | null>(null);
 
   // Debounce search input
   useEffect(() => {
@@ -68,29 +67,18 @@ function NarrativeDiscoveryInner() {
     return () => { cancelled = true; };
   }, [sortBy, debouncedSearch]);
 
-  // FIXED: DEEP-LINK LOGIC
-  // Wrapped in setTimeout to resolve the "cascading renders" lint error
-  useEffect(() => {
+  // URL + loaded data determine which narrative is open (derived state — no effect).
+  const activeNarrative = useMemo(() => {
     const id = searchParams.get("id");
-    if (!id || narratives.length === 0) return;
-
-    const found = narratives.find((n) => String(n.id) === String(id)) ?? null;
-    
-    if (found?.id !== activeNarrative?.id) {
-      const timer = setTimeout(() => {
-        setActiveNarrative(found);
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-  }, [searchParams, narratives, activeNarrative]);
+    if (!id || narratives.length === 0) return null;
+    return narratives.find((n) => String(n.id) === String(id)) ?? null;
+  }, [searchParams, narratives]);
 
   function openNarrative(n: NarrativeItem) {
-    setActiveNarrative(n);
     router.replace(`/narrative-discovery?id=${n.id}`, { scroll: false });
   }
 
   function closeNarrative() {
-    setActiveNarrative(null);
     router.replace("/narrative-discovery", { scroll: false });
   }
 
@@ -109,10 +97,10 @@ function NarrativeDiscoveryInner() {
   return (
     <div className="mx-auto w-full max-w-6xl p-8">
       <header className="mb-6">
-        <h2 className="text-2xl font-semibold tracking-tight text-zinc-900">
+        <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
           Narrative Discovery
         </h2>
-        <p className="mt-1 text-sm text-zinc-500">
+        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
           Explore emerging narratives and trending stories across YouTube content.
         </p>
       </header>
@@ -130,40 +118,38 @@ function NarrativeDiscoveryInner() {
             placeholder="Search narratives..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-10 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
+            className="h-10 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/20"
           />
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-zinc-500">Sort by</span>
-          <div className="relative">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="h-10 cursor-pointer appearance-none rounded-lg border border-zinc-200 bg-white px-3 pr-8 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
-            >
-              <option value="trending">Trending</option>
-              <option value="risk">Risk Score</option>
-              <option value="views">Total Views</option>
-            </select>
-          </div>
+          <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Sort by</span>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            className="h-10 cursor-pointer appearance-none rounded-lg border border-zinc-200 bg-white px-3 pr-8 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/20"
+          >
+            <option value="trending">Trending</option>
+            <option value="risk">Risk Score</option>
+            <option value="views">Total Views</option>
+          </select>
         </div>
       </section>
 
       {loading ? (
-        <p className="text-sm text-zinc-500 animate-pulse">Scanning social data...</p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 animate-pulse">Scanning social data...</p>
       ) : (
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {visibleNarratives.map((narrative) => (
             <article
               key={narrative.id}
-              className="flex flex-col justify-between rounded-xl border border-zinc-200 bg-white p-5 shadow-sm hover:border-zinc-300 transition-all"
+              className="flex flex-col justify-between rounded-xl border border-zinc-200 bg-white p-5 shadow-sm hover:border-zinc-300 transition-all dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-zinc-500"
             >
               <div>
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="text-sm font-semibold text-zinc-900">{narrative.title}</h3>
-                    <p className="mt-1 text-xs text-zinc-500 line-clamp-2">{narrative.description}</p>
+                    <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{narrative.title}</h3>
+                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2">{narrative.description}</p>
                   </div>
                   <span className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${riskBadgeClasses(narrative.risk_level)}`}>
                     {narrative.risk_level}
@@ -172,23 +158,23 @@ function NarrativeDiscoveryInner() {
 
                 <dl className="mt-4 space-y-1.5 text-xs">
                   <div className="flex justify-between">
-                    <dt className="text-zinc-500">Videos:</dt>
-                    <dd className="font-medium text-zinc-900">{narrative.videos_analyzed?.toLocaleString()}</dd>
+                    <dt className="text-zinc-500 dark:text-zinc-400">Videos:</dt>
+                    <dd className="font-medium text-zinc-900 dark:text-zinc-100">{narrative.videos_analyzed?.toLocaleString()}</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-zinc-500">Total Views:</dt>
-                    <dd className="font-medium text-zinc-900">{narrative.total_views}</dd>
+                    <dt className="text-zinc-500 dark:text-zinc-400">Total Views:</dt>
+                    <dd className="font-medium text-zinc-900 dark:text-zinc-100">{narrative.total_views}</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-zinc-500">Risk Score:</dt>
-                    <dd className="font-medium text-zinc-900">{narrative.risk_score}/10</dd>
+                    <dt className="text-zinc-500 dark:text-zinc-400">Risk Score:</dt>
+                    <dd className="font-medium text-zinc-900 dark:text-zinc-100">{narrative.risk_score}/10</dd>
                   </div>
                 </dl>
               </div>
 
               <button
                 onClick={() => openNarrative(narrative)}
-                className="mt-4 inline-flex h-9 w-full items-center justify-center rounded-lg bg-zinc-900 text-sm font-medium text-white hover:bg-zinc-800 transition-colors"
+                className="mt-4 inline-flex h-9 w-full items-center justify-center rounded-lg bg-zinc-900 text-sm font-medium text-white hover:bg-zinc-700 transition-colors dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
               >
                 Explore Narrative
               </button>
@@ -212,42 +198,42 @@ function NarrativeDetailDialog({ narrative, onClose }: { narrative: NarrativeIte
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className="backdrop-enter fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="dialog-enter w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl dark:bg-zinc-800" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-lg font-bold text-zinc-900">{narrative.title}</h2>
-            <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mt-1">{narrative.category}</p>
+            <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">{narrative.title}</h2>
+            <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mt-1">{narrative.category}</p>
           </div>
           <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${riskBadgeClasses(narrative.risk_level)}`}>
             {narrative.risk_level} RISK
           </span>
         </div>
 
-        <p className="mt-4 text-sm leading-relaxed text-zinc-600">{narrative.detail || narrative.description}</p>
+        <p className="mt-4 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">{narrative.detail || narrative.description}</p>
 
-        <div className="mt-6 grid grid-cols-2 gap-4 bg-zinc-50 p-4 rounded-xl border border-zinc-100">
+        <div className="mt-6 grid grid-cols-2 gap-4 bg-zinc-50 p-4 rounded-xl border border-zinc-100 dark:bg-zinc-900/50 dark:border-zinc-700">
           <div>
-            <dt className="text-[10px] text-zinc-400 uppercase font-bold">Analyzed</dt>
-            <dd className="text-sm font-semibold text-zinc-900">{narrative.videos_analyzed?.toLocaleString()} Videos</dd>
+            <dt className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase font-bold">Analyzed</dt>
+            <dd className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{narrative.videos_analyzed?.toLocaleString()} Videos</dd>
           </div>
           <div>
-            <dt className="text-[10px] text-zinc-400 uppercase font-bold">Views</dt>
-            <dd className="text-sm font-semibold text-zinc-900">{narrative.total_views}</dd>
+            <dt className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase font-bold">Views</dt>
+            <dd className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{narrative.total_views}</dd>
           </div>
           <div>
-            <dt className="text-[10px] text-zinc-400 uppercase font-bold">Risk Score</dt>
-            <dd className="text-sm font-semibold text-zinc-900">{narrative.risk_score}/10</dd>
+            <dt className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase font-bold">Risk Score</dt>
+            <dd className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{narrative.risk_score}/10</dd>
           </div>
           <div>
-            <dt className="text-[10px] text-zinc-400 uppercase font-bold">Window</dt>
-            <dd className="text-sm font-semibold text-zinc-900">{narrative.time_window}</dd>
+            <dt className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase font-bold">Window</dt>
+            <dd className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{narrative.time_window}</dd>
           </div>
         </div>
 
         <button
           onClick={onClose}
-          className="mt-6 w-full h-10 bg-zinc-100 text-zinc-900 font-semibold rounded-lg hover:bg-zinc-200 transition-colors"
+          className="mt-6 w-full h-10 bg-zinc-100 text-zinc-900 font-semibold rounded-lg hover:bg-zinc-200 transition-colors dark:bg-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-600"
         >
           Close
         </button>

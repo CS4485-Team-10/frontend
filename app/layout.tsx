@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { SidebarProvider } from "@/components/layout/SidebarContext";
 import { NotificationProvider } from "@/components/layout/NotificationContext";
 import { AuthProvider } from "@/components/layout/AuthContext";
+import { ThemeProvider } from "@/components/layout/ThemeContext";
 import { ClientShell } from "@/components/layout/ClientShell";
 import "./globals.css";
 
@@ -27,13 +28,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
-        <AuthProvider>
-          <NotificationProvider>
-            <SidebarProvider>
-              <ClientShell>{children}</ClientShell>
-            </SidebarProvider>
-          </NotificationProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <NotificationProvider>
+              <SidebarProvider>
+                <ClientShell>{children}</ClientShell>
+              </SidebarProvider>
+            </NotificationProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

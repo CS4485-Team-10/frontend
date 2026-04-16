@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* ─── Tailwind v4: class-based dark mode ────────────────────────────────────── */
+/* When an ancestor has the .dark class, dark: variants are applied.             */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -8,6 +12,41 @@
 body {
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
+
+/* ─── Smooth light ↔ dark transition ────────────────────────────────────────── */
+/* Applied only while toggling so it never slows down hover/click interactions   */
+html.theme-transitioning,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition:
+    background-color 0.8s ease,
+    border-color     0.8s ease,
+    color            0.6s ease,
+    fill             0.6s ease,
+    stroke           0.6s ease !important;
+}
+
+/* ─── Scrollbar CSS variables ────────────────────────────────────────────────── */
+:root {
+  --sb-track: #e5e5e5;
+  --sb-thumb: #b0b0b0;
+  --sb-thumb-hover: #888888;
+}
+.dark {
+  --sb-track: #1a1a1a;
+  --sb-thumb: #4a4a4a;
+  --sb-thumb-hover: #6a6a6a;
+}
+
+/* ─── Custom scrollbar (Webkit) ──────────────────────────────────────────────── */
+::-webkit-scrollbar             { width: 8px; height: 8px; }
+::-webkit-scrollbar-track       { background: var(--sb-track); border-radius: 99px; }
+::-webkit-scrollbar-thumb       { background: var(--sb-thumb); border-radius: 99px; border: 2px solid var(--sb-track); }
+::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-hover); }
+
+/* ─── Firefox scrollbar ──────────────────────────────────────────────────────── */
+* { scrollbar-width: thin; scrollbar-color: var(--sb-thumb) var(--sb-track); }
 
 /* ─── View Transitions API ──────────────────────────────────────────────── */
 /* Opt the entire app into smooth cross-page transitions                      */
