@@ -55,8 +55,8 @@ export default function ClaimValidationPage() {
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Claim Validation</h1>
-          <p className="text-zinc-500 mt-1">
+          <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Claim Validation</h1>
+          <p className="text-zinc-500 dark:text-zinc-400 mt-1">
             Review and verify claims with AI-powered confidence scoring
           </p>
         </div>
@@ -65,7 +65,7 @@ export default function ClaimValidationPage() {
           placeholder="Search claims or creators..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="border border-zinc-200 rounded-lg px-4 py-2 w-96 focus:ring-2 focus:ring-zinc-900/10 outline-none"
+          className="border border-zinc-200 rounded-lg px-4 py-2 w-96 focus:ring-2 focus:ring-zinc-900/10 outline-none bg-white text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500 dark:focus:ring-zinc-400/20"
         />
       </div>
 
@@ -78,24 +78,24 @@ export default function ClaimValidationPage() {
       </div>
 
       {/* Claims Table Container */}
-      <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
-        <div className="flex justify-between items-center p-6 border-b border-zinc-100">
-          <h2 className="text-lg font-semibold text-zinc-900">Claims Database</h2>
+      <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm dark:bg-zinc-800 dark:border-zinc-700">
+        <div className="flex justify-between items-center p-6 border-b border-zinc-100 dark:border-zinc-700">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Claims Database</h2>
           <div className="flex gap-3">
-             <button className="text-sm font-medium border rounded-lg px-4 py-2 hover:bg-zinc-50">Filter</button>
-             <button className="text-sm font-medium bg-zinc-900 text-white px-4 py-2 rounded-lg hover:bg-zinc-800 transition-colors">Export CSV</button>
+            <button className="text-sm font-medium border border-zinc-200 rounded-lg px-4 py-2 text-zinc-700 hover:bg-zinc-50 transition-colors dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-700">Filter</button>
+            <button className="text-sm font-medium border border-zinc-200 rounded-lg px-4 py-2 text-zinc-700 hover:bg-zinc-50 transition-colors dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-700">Export CSV</button>
           </div>
         </div>
 
         {loading ? (
           <div className="p-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-zinc-900 mb-4"></div>
-            <p className="text-sm text-zinc-500">Processing Narrative Data...</p>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-zinc-900 dark:border-zinc-300 mb-4"></div>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">Processing Narrative Data...</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="bg-zinc-50 text-zinc-500 font-medium border-b border-zinc-100">
+              <thead className="bg-zinc-50 text-zinc-500 font-medium border-b border-zinc-100 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700">
                 <tr>
                   <th className="p-4">Claim ID</th>
                   <th className="p-4">Claim Text</th>
@@ -104,12 +104,12 @@ export default function ClaimValidationPage() {
                   <th className="p-4">Confidence</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100">
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-700/50">
                 {visibleClaims.map((claim) => (
-                  <tr key={claim.claim_id} className="hover:bg-zinc-50/50 transition-colors">
-                    <td className="p-4 font-mono text-xs text-zinc-400">{claim.claim_id}</td>
-                    <td className="p-4 text-zinc-800 font-medium max-w-md">{claim.text}</td>
-                    <td className="p-4 text-zinc-500">{claim.source}</td>
+                  <tr key={claim.claim_id} className="hover:bg-zinc-50/50 transition-colors dark:hover:bg-zinc-700/40">
+                    <td className="p-4 font-mono text-xs text-zinc-400 dark:text-zinc-500">{claim.claim_id}</td>
+                    <td className="p-4 text-zinc-800 font-medium max-w-md dark:text-zinc-200">{claim.text}</td>
+                    <td className="p-4 text-zinc-500 dark:text-zinc-400">{claim.source}</td>
                     <td className="p-4 text-center">
                       <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${statusStyle(claim.status)}`}>
                         {claim.status.toUpperCase()}
@@ -117,13 +117,13 @@ export default function ClaimValidationPage() {
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex-1 w-20 bg-zinc-100 rounded-full h-1.5">
+                        <div className="flex-1 w-20 bg-zinc-200 rounded-full h-1.5 dark:bg-transparent">
                           <div
-                            className="bg-zinc-900 h-1.5 rounded-full"
+                            className="bg-zinc-600 h-1.5 rounded-full dark:bg-zinc-500"
                             style={{ width: claim.confidence }}
                           />
                         </div>
-                        <span className="text-xs font-semibold text-zinc-700">{claim.confidence}</span>
+                        <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">{claim.confidence}</span>
                       </div>
                     </td>
                   </tr>
@@ -139,10 +139,10 @@ export default function ClaimValidationPage() {
 
 function Card({ title, value, subtitle }: { title: string; value: number; subtitle: string }) {
   return (
-    <div className="border border-zinc-200 rounded-xl p-6 bg-white shadow-sm">
-      <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider">{title}</p>
-      <p className="text-3xl font-bold mt-2 text-zinc-900">{value}</p>
-      <p className="text-zinc-400 text-xs mt-1 italic">{subtitle}</p>
+    <div className="border border-zinc-200 rounded-xl p-6 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
+      <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider dark:text-zinc-400">{title}</p>
+      <p className="text-3xl font-bold mt-2 text-zinc-900 dark:text-zinc-100">{value}</p>
+      <p className="text-zinc-400 text-xs mt-1 italic dark:text-zinc-500">{subtitle}</p>
     </div>
   )
 }

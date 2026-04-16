@@ -68,7 +68,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`flex h-full shrink-0 flex-col border-r border-white/10 bg-[#1A1A1A] font-sans transition-[width] duration-200 ease-out ${
+      className={`flex h-full shrink-0 flex-col border-r border-white/10 bg-[#1A1A1A] dark:border-zinc-700/50 font-sans transition-[width] duration-200 ease-out ${
         collapsed ? "w-14" : "w-[240px]"
       }`}
     >
