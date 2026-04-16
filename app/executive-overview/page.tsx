@@ -2,51 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { apiFetch } from "@/lib/api";
+import type { ExecutiveOverviewResponse, TopicClustersResponse, TopicCluster } from "@/lib/types/executive-overview";
+import type { ClaimListResponse, ClaimItem } from "@/lib/types/claim";
 
-// --- 1. ADD INTERFACES TO KILL 'ANY' ---
-interface TopicTrend {
-  date: string;
-  [key: string]: string | number; // Allows dynamic keys like "Nutrition", "AI"
-}
-
-interface Cluster {
-  label: string;
-  size: number;
-  x: number;
-  y: number;
-}
-
-interface ExecutiveData {
-  total_videos_scoped: number;
-  active_narratives: number;
-  verified_claims: number;
-  high_risk_alerts: number;
-  overview_metrics_meta: {
-    total_videos_scoped: { delta_pct: number; delta_period_label: string };
-    active_narratives: { delta_new: number; delta_period_label: string };
-    verified_claims: { accuracy_pct: number; accuracy_label: string };
-    high_risk_alerts: { status_label: string };
-  };
-  topic_trends: TopicTrend[];
-  sentiment: { positive: number; neutral: number; negative: number };
-}
-
-interface Claim {
-  claim_id: string;
-  text: string;
-  views: string;
-  confidence: string;
-  associated_narrative: string;
-  risk_level: string;
-}
-
-type RiskLevel = "High" | "Medium" | "Low";
-
-function riskBadgeClasses(level: string) {
-  if (level === "High")   return "bg-red-50 text-red-700 ring-1 ring-red-100";
-  if (level === "Medium") return "bg-amber-50 text-amber-700 ring-1 ring-amber-100";
-  return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100";
-}
+type TopicTrend = Record<string, string | number>;
 
 function parseViews(v: string) {
   const t = v.trim().toUpperCase();
@@ -164,8 +124,7 @@ function SimpleLineChart({ topicTrends }: { topicTrends: TopicTrend[] }) {
   );
 }
 
-// --- 2. TYPED COMPONENT ---
-function BubbleChart({ clusters }: { clusters: Cluster[] }) {
+function BubbleChart({ clusters }: { clusters: TopicCluster[] }) {
   const width = 340;
   const height = 220;
   return (
@@ -182,33 +141,26 @@ function BubbleChart({ clusters }: { clusters: Cluster[] }) {
 }
 
 export default function ExecutiveOverviewPage() {
-  // --- 3. TYPED STATE ---
-  const [data, setData] = useState<ExecutiveData | null>(null);
-  const [clusters, setClusters] = useState<Cluster[]>([]);
-  const [claims, setClaims] = useState<Claim[]>([]);
+  const [data, setData] = useState<ExecutiveOverviewResponse | null>(null);
+  const [clusters, setClusters] = useState<TopicCluster[]>([]);
+  const [claims, setClaims] = useState<ClaimItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/mock/mockdata.json")
-      .then((res) => {
-        if (!res.ok) throw new Error("Could not find mockdata.json in /public/mock/");
-        return res.json();
-      })
-      .then((fullData) => {
-        setData(fullData.executive_overview);
-        setClusters([
-          { label: "AI",        size: 40, x: 0.2, y: 0.3 },
-          { label: "Health",    size: 30, x: 0.7, y: 0.5 },
-          { label: "Crypto",    size: 25, x: 0.4, y: 0.8 },
-          { label: "Nutrition", size: 20, x: 0.8, y: 0.2 },
-        ]);
-        // Sort claims by view count descending — same data source as Claim Validation tab
-        const sorted = [...(fullData.claim_validation as Claim[])].sort(
+    Promise.all([
+      apiFetch<ExecutiveOverviewResponse>("/overview/executive"),
+      apiFetch<TopicClustersResponse>("/overview/topic-clusters"),
+      apiFetch<ClaimListResponse>("/claims", { limit: 20 }),
+    ])
+      .then(([execData, clusterData, claimData]) => {
+        setData(execData);
+        setClusters(clusterData.clusters);
+        const sorted = [...claimData.data].sort(
           (a, b) => parseViews(b.views) - parseViews(a.views)
         );
         setClaims(sorted);
       })
-      .catch((err) => setError(err.message));
+      .catch((err) => setError(err instanceof Error ? err.message : String(err)));
   }, []);
 
   if (error) return <div className="p-8 text-red-600">Failed to load: {error}</div>;
@@ -315,9 +267,9 @@ export default function ExecutiveOverviewPage() {
               <thead>
                 <tr className="border-b border-zinc-100 text-xs font-semibold text-zinc-500">
                   <th className="px-6 py-3 text-left">Claim Text</th>
-                  <th className="px-4 py-3 text-left">Associated Narrative</th>
+                  <th className="px-4 py-3 text-left">Source</th>
                   <th className="px-4 py-3 text-right">View Count</th>
-                  <th className="px-4 py-3 text-center">Risk Level</th>
+                  <th className="px-4 py-3 text-center">Status</th>
                   <th className="px-4 py-3 text-right">Confidence</th>
                 </tr>
               </thead>
@@ -331,14 +283,16 @@ export default function ExecutiveOverviewPage() {
                 {claims.map((claim) => (
                   <tr key={claim.claim_id} className="transition-colors hover:bg-zinc-50">
                     <td className="max-w-[220px] px-6 py-3.5 text-xs text-zinc-700">{claim.text}</td>
-                    <td className="whitespace-nowrap px-4 py-3.5 text-xs text-zinc-500">{claim.associated_narrative}</td>
+                    <td className="whitespace-nowrap px-4 py-3.5 text-xs text-zinc-500">{claim.source}</td>
                     <td className="whitespace-nowrap px-4 py-3.5 text-right text-xs font-medium text-zinc-900">{claim.views}</td>
                     <td className="px-4 py-3.5 text-center">
-                      {claim.risk_level && (
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${riskBadgeClasses(claim.risk_level as RiskLevel)}`}>
-                          {claim.risk_level}
-                        </span>
-                      )}
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                        claim.status === "Verified" ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
+                          : claim.status === "Disputed" ? "bg-red-50 text-red-700 ring-1 ring-red-100"
+                          : "bg-amber-50 text-amber-700 ring-1 ring-amber-100"
+                      }`}>
+                        {claim.status}
+                      </span>
                     </td>
                     <td className="px-4 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -355,41 +309,13 @@ export default function ExecutiveOverviewPage() {
           </div>
         </div>
 
-        {/* Sentiment Analysis — same data as Trend Analytics tab */}
-        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-[0_1px_0_rgba(0,0,0,0.04)]">
+        {/* Sentiment Analysis — API not yet available */}
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-[0_1px_0_rgba(0,0,0,0.04)] flex flex-col items-center justify-center">
           <h3 className="text-sm font-semibold text-zinc-900">Sentiment Analysis</h3>
           <p className="mt-0.5 text-xs text-zinc-500">Health domain overview</p>
-
-          <div className="mt-5 space-y-4">
-            {(
-              [
-                { label: "Positive", value: data.sentiment.positive, color: "bg-zinc-900" },
-                { label: "Neutral",  value: data.sentiment.neutral,  color: "bg-zinc-400" },
-                { label: "Negative", value: data.sentiment.negative, color: "bg-zinc-300" },
-              ] as const
-            ).map(({ label, value, color }) => (
-              <div key={label}>
-                <div className="mb-1.5 flex items-center justify-between text-xs">
-                  <span className="font-medium text-zinc-700">{label}</span>
-                  <span className="font-semibold text-zinc-900">{value}%</span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
-                  <div className={`h-full rounded-full ${color} transition-all duration-700`} style={{ width: `${value}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 border-t border-zinc-100 pt-4">
-            <p className="text-xs font-medium text-zinc-500">Overall Signal</p>
-            <p className="mt-1 text-sm font-semibold text-zinc-900">
-              {data.sentiment.positive > 50 ? "Predominantly Positive"
-                : data.sentiment.negative > 35 ? "High Negative Signal"
-                : "Mixed — Monitor Closely"}
-            </p>
-            <p className="mt-0.5 text-xs text-zinc-400">
-              Based on {formatNumber(data.verified_claims)} verified claims
-            </p>
+          <div className="mt-8 text-center">
+            <p className="text-sm text-zinc-400">Sentiment analysis endpoint coming soon.</p>
+            <p className="text-xs text-zinc-300 mt-1">See docs/MISSING_APIS.md for details.</p>
           </div>
         </div>
 
