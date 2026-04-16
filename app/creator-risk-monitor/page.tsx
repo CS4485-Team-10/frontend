@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+import { apiFetch } from "@/lib/api";
 
 type Creator = {
   handle: string;
@@ -28,15 +27,10 @@ const CreatorRiskMonitor = () => {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({ sort });
-      if (narrative.trim()) params.set("narrative", narrative.trim());
-
-      const res = await fetch(`${API_URL}/creators/risk?${params}`);
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.detail || `Request failed (${res.status})`);
-      }
-      const json = await res.json();
+      const json = await apiFetch<{ ok: boolean; data: Creator[] }>("/creators/risk", {
+        sort,
+        narrative: narrative.trim() || undefined,
+      });
       setCreators(json.data ?? []);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load creators");

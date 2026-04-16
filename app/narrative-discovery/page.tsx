@@ -1,22 +1,11 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { apiFetch } from "@/lib/api";
+import type { NarrativeListResponse, NarrativeItem } from "@/lib/types/narrative";
 
 type RiskLevel = "High" | "Medium" | "Low";
-
-interface Narrative {
-  id: string | number;
-  title: string;
-  description?: string;
-  detail?: string;
-  category: string;
-  risk_level: RiskLevel;
-  risk_score: number;
-  videos_analyzed: number;
-  total_views: string;
-  time_window: string;
-}
 
 // Helpers
 function riskBadgeClasses(level: RiskLevel) {
@@ -26,14 +15,6 @@ function riskBadgeClasses(level: RiskLevel) {
     case "Low":    return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100";
     default:       return "bg-zinc-50 text-zinc-700 ring-1 ring-zinc-100";
   }
-}
-
-function parseViews(value: string) {
-  if (!value) return 0;
-  const t = value.trim().toUpperCase();
-  const multiplier = t.endsWith("M") ? 1_000_000 : t.endsWith("K") ? 1_000 : 1;
-  const num = parseFloat(t.replace(/[MK,]/g, ""));
-  return Number.isNaN(num) ? 0 : num * multiplier;
 }
 
 type SortOption = "trending" | "risk" | "views";
@@ -50,27 +31,42 @@ function NarrativeDiscoveryInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [narratives, setNarratives] = useState<Narrative[]>([]);
+  const [narratives, setNarratives] = useState<NarrativeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("trending");
-  const [activeNarrative, setActiveNarrative] = useState<Narrative | null>(null);
+  const [activeNarrative, setActiveNarrative] = useState<NarrativeItem | null>(null);
 
-  // Fetch Logic
+  // Debounce search input
   useEffect(() => {
-    fetch("/mock/mockdata.json")
-      .then((res) => {
-        if (!res.ok) throw new Error("Could not find mockdata.json");
-        return res.json();
-      })
-      .then((fullData) => {
-        setNarratives(fullData.narrative_discovery || []);
-        setError(null);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, []);
+    const id = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(id);
+  }, [search]);
+
+  // Fetch from API when sort or debounced search changes
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const response = await apiFetch<NarrativeListResponse>("/narratives", {
+          sort_by: sortBy,
+          search: debouncedSearch.trim() || undefined,
+        });
+        if (!cancelled) {
+          setNarratives(response.data);
+          setError(null);
+        }
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [sortBy, debouncedSearch]);
 
   // FIXED: DEEP-LINK LOGIC
   // Wrapped in setTimeout to resolve the "cascading renders" lint error
@@ -88,7 +84,7 @@ function NarrativeDiscoveryInner() {
     }
   }, [searchParams, narratives, activeNarrative]);
 
-  function openNarrative(n: Narrative) {
+  function openNarrative(n: NarrativeItem) {
     setActiveNarrative(n);
     router.replace(`/narrative-discovery?id=${n.id}`, { scroll: false });
   }
@@ -98,24 +94,7 @@ function NarrativeDiscoveryInner() {
     router.replace("/narrative-discovery", { scroll: false });
   }
 
-  const visibleNarratives = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    const result = [...narratives];
-    
-    if (term) {
-      return result.filter((n) =>
-        `${n.title} ${n.description ?? ""}`.toLowerCase().includes(term)
-      );
-    }
-
-    if (sortBy === "risk") {
-      result.sort((a, b) => b.risk_score - a.risk_score);
-    } else if (sortBy === "views") {
-      result.sort((a, b) => parseViews(b.total_views) - parseViews(a.total_views));
-    }
-    
-    return result;
-  }, [search, sortBy, narratives]);
+  const visibleNarratives = narratives;
 
   if (error) {
     return (
@@ -225,7 +204,7 @@ function NarrativeDiscoveryInner() {
   );
 }
 
-function NarrativeDetailDialog({ narrative, onClose }: { narrative: Narrative; onClose: () => void }) {
+function NarrativeDetailDialog({ narrative, onClose }: { narrative: NarrativeItem; onClose: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AreaChart,
   Area,
@@ -8,88 +8,74 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
   CartesianGrid,
   Legend,
 } from "recharts";
+import { apiFetch } from "@/lib/api";
+import type { ExecutiveOverviewResponse } from "@/lib/types/executive-overview";
+import type { NarrativeListResponse, NarrativeItem } from "@/lib/types/narrative";
 
-// --- 1. DEFINE INTERFACES ---
-type TopicTrend = {
-  date: string;
-  AI: number;
-  Health: number;
-  Crypto: number;
-  Nutrition: number;
-};
+type TopicTrend = Record<string, string | number>;
 
-type Narrative = {
-  id: string;
-  title: string;
-  risk_level: string;
-  risk_score: number;
-  videos_analyzed: number;
-  total_views: string;
-  category: string;
-};
+const AREA_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
 
-interface FullMockData {
-  executive_overview: {
-    topic_trends: TopicTrend[];
-    sentiment: {
-      positive: number;
-      neutral: number;
-      negative: number;
-    };
-    verified_claims: number;
-    active_narratives: number;
-  };
-  narrative_discovery: Narrative[];
+function topicKeys(trends: TopicTrend[]): string[] {
+  const keys = new Set<string>();
+  for (const point of trends) {
+    for (const k of Object.keys(point)) {
+      if (k !== "date") keys.add(k);
+    }
+  }
+  return Array.from(keys);
 }
 
 export default function TrendAnalyticsPage() {
-  // --- 2. UPDATE STATE TYPE ---
-  const [data, setData] = useState<FullMockData | null>(null);
+  const [execData, setExecData] = useState<ExecutiveOverviewResponse | null>(null);
+  const [narratives, setNarratives] = useState<NarrativeItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [range, setRange] = useState("30d");
 
   useEffect(() => {
-    fetch("/mock/mockdata.json")
-      .then((res) => res.json())
-      .then((json: FullMockData) => setData(json));
+    Promise.all([
+      apiFetch<ExecutiveOverviewResponse>("/overview/executive"),
+      apiFetch<NarrativeListResponse>("/narratives", { sort_by: "trending" }),
+    ])
+      .then(([exec, narr]) => {
+        setExecData(exec);
+        setNarratives(narr.data);
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : String(err)))
+      .finally(() => setLoading(false));
   }, []);
 
-  if (!data) return <div className="p-8">Loading...</div>;
-
-  const trends: TopicTrend[] = data.executive_overview.topic_trends;
-  const sentiment = data.executive_overview.sentiment;
-  const narratives: Narrative[] = data.narrative_discovery;
-
-  const sentimentData = [
-    { name: "Positive", value: sentiment.positive },
-    { name: "Neutral", value: sentiment.neutral },
-    { name: "Negative", value: sentiment.negative },
-  ];
-
-  // --- 3. FIX FILTER TYPE ---
-  const filterTrends = (): TopicTrend[] => {
+  const filteredTrends = useMemo(() => {
+    if (!execData) return [];
+    const trends = execData.topic_trends;
     const now = new Date();
     let days = 30;
-
     if (range === "7d") days = 7;
     if (range === "30d") days = 30;
     if (range === "6m") days = 180;
     if (range === "1y") days = 365;
-
     const cutoff = new Date();
     cutoff.setDate(now.getDate() - days);
+    return trends.filter((item) => new Date(item.date as string) >= cutoff);
+  }, [execData, range]);
 
-    // Use TopicTrend type here instead of any
-    return trends.filter((item: TopicTrend) => {
-      return new Date(item.date) >= cutoff;
-    });
-  };
+  const series = useMemo(() => topicKeys(filteredTrends), [filteredTrends]);
 
-  const filteredTrends = filterTrends();
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
+          <p className="text-sm text-red-600 font-medium">Failed to load: {error}</p>
+          <p className="text-xs text-red-500 mt-1">Check that the backend API is running.</p>
+        </div>
+      </div>
+    );
+  }
+  if (loading || !execData) return <div className="p-8 text-zinc-500">Loading...</div>;
 
   return (
     <div className="mx-auto w-full max-w-6xl p-8 space-y-8">
@@ -130,29 +116,26 @@ export default function TrendAnalyticsPage() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Area type="monotone" dataKey="AI" stackId="1" stroke="#6366f1" fill="#6366f1" />
-                <Area type="monotone" dataKey="Health" stackId="1" stroke="#10b981" fill="#10b981" />
-                <Area type="monotone" dataKey="Crypto" stackId="1" stroke="#f59e0b" fill="#f59e0b" />
-                <Area type="monotone" dataKey="Nutrition" stackId="1" stroke="#ef4444" fill="#ef4444" />
+                {series.map((key, i) => (
+                  <Area
+                    key={key}
+                    type="monotone"
+                    dataKey={key}
+                    stackId="1"
+                    stroke={AREA_COLORS[i % AREA_COLORS.length]}
+                    fill={AREA_COLORS[i % AREA_COLORS.length]}
+                  />
+                ))}
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Sentiment Shift */}
-        <div className="bg-white border rounded-xl p-5">
-          <h3 className="font-medium mb-4">Sentiment Shift</h3>
-          <div className="h-60">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={sentimentData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#6366f1" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        {/* Sentiment Shift — API not yet available */}
+        <div className="bg-white border rounded-xl p-5 flex flex-col items-center justify-center">
+          <h3 className="font-medium mb-2">Sentiment Shift</h3>
+          <p className="text-sm text-zinc-400">Sentiment analysis endpoint coming soon.</p>
+          <p className="text-xs text-zinc-300 mt-1">See docs/MISSING_APIS.md for details.</p>
         </div>
       </div>
 
@@ -186,12 +169,12 @@ export default function TrendAnalyticsPage() {
       {/* DATA HIERARCHY */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div className="bg-white border rounded-xl p-6 text-center">
-          <div className="text-2xl font-semibold">{data.executive_overview.verified_claims}</div>
+          <div className="text-2xl font-semibold">{execData.verified_claims}</div>
           <p className="text-sm text-zinc-500">Claims</p>
           <p className="text-xs text-zinc-400">Individual statements</p>
         </div>
         <div className="bg-white border rounded-xl p-6 text-center">
-          <div className="text-2xl font-semibold">{data.executive_overview.active_narratives}</div>
+          <div className="text-2xl font-semibold">{execData.active_narratives}</div>
           <p className="text-sm text-zinc-500">Narratives</p>
           <p className="text-xs text-zinc-400">Grouped claims</p>
         </div>

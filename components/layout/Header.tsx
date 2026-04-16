@@ -3,21 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import mock from "@/public/mock/mockdata.json";
+import { apiFetch } from "@/lib/api";
+import type { AlertListResponse, AlertItem } from "@/lib/types/alert";
 import { useSidebar } from "./SidebarContext";
 import { useNotifications } from "./NotificationContext";
 import { useAuth } from "./AuthContext";
 import { User, Settings, LogOut, Info, ChevronDown, Bell } from "lucide-react";
-
-// --- TYPES ---
-interface Narrative {
-  id: string | number;
-  title: string;
-  description?: string;
-  risk_level: "High" | "Medium" | "Low";
-}
-
-const allNarratives = mock.narrative_discovery as Narrative[];
 
 export function Header() {
   const router = useRouter();
@@ -26,6 +17,13 @@ export function Header() {
   const { notifHighRisk, notifMediumRisk } = useNotifications();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isBellOpen, setIsBellOpen] = useState(false);
+  const [allAlerts, setAllAlerts] = useState<AlertItem[]>([]);
+
+  useEffect(() => {
+    apiFetch<AlertListResponse>("/alerts")
+      .then((res) => setAllAlerts(res.data))
+      .catch(() => {});
+  }, []);
 
   function handleGoToAlerts() {
     setIsBellOpen(false);
@@ -33,12 +31,12 @@ export function Header() {
   }
 
   const visibleNarratives = useMemo(() => {
-    return allNarratives.filter((n) => {
+    return allAlerts.filter((n) => {
       if (n.risk_level === "High" && notifHighRisk) return true;
       if (n.risk_level === "Medium" && notifMediumRisk) return true;
       return false;
     });
-  }, [notifHighRisk, notifMediumRisk]);
+  }, [allAlerts, notifHighRisk, notifMediumRisk]);
 
   const badgeCount = visibleNarratives.length;
 

@@ -1,15 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import mock from "@/public/mock/mockdata.json";
+import { apiFetch } from "@/lib/api";
+import type { AlertListResponse, AlertItem } from "@/lib/types/alert";
 import { useNotifications } from "@/components/layout/NotificationContext";
 import { useSidebar } from "@/components/layout/SidebarContext";
 
 type RiskLevel = "High" | "Medium" | "Low";
 type SortFilter = "All" | RiskLevel;
-
-const narratives = mock.narrative_discovery;
 
 function riskBadgeClasses(level: RiskLevel) {
   switch (level) {
@@ -79,23 +78,44 @@ function SettingRow({
 export default function AlertsSettingsPage() {
   const router = useRouter();
   const [sortFilter, setSortFilter] = useState<SortFilter>("All");
+  const [alerts, setAlerts] = useState<AlertItem[]>([]);
+  const [counts, setCounts] = useState({ high: 0, medium: 0, low: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { notifHighRisk, notifMediumRisk, setNotifHighRisk, setNotifMediumRisk } = useNotifications();
   const { compactMode, setCompactMode } = useSidebar();
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const response = await apiFetch<AlertListResponse>("/alerts", {
+          risk_level: sortFilter === "All" ? undefined : sortFilter,
+        });
+        if (!cancelled) {
+          setAlerts(response.data);
+          setCounts({
+            high: response.high_count,
+            medium: response.medium_count,
+            low: response.low_count,
+          });
+          setError(null);
+        }
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [sortFilter]);
 
   const filterOptions: SortFilter[] = ["All", "High", "Medium", "Low"];
 
   const filtered = useMemo(() => {
-    const base =
-      sortFilter === "All"
-        ? [...narratives]
-        : narratives.filter((n) => n.risk_level === sortFilter);
-    return base.sort((a, b) => b.risk_score - a.risk_score);
-  }, [sortFilter]);
-
-  const highCount = narratives.filter((n) => n.risk_level === "High").length;
-  const medCount  = narratives.filter((n) => n.risk_level === "Medium").length;
-  const lowCount  = narratives.filter((n) => n.risk_level === "Low").length;
+    return [...alerts].sort((a, b) => b.risk_score - a.risk_score);
+  }, [alerts]);
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8 p-8">
@@ -112,7 +132,7 @@ export default function AlertsSettingsPage() {
       {/* Summary stat cards */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {(["High", "Medium", "Low"] as RiskLevel[]).map((level) => {
-          const count = level === "High" ? highCount : level === "Medium" ? medCount : lowCount;
+          const count = level === "High" ? counts.high : level === "Medium" ? counts.medium : counts.low;
           const sub   = level === "High" ? "Requires immediate review" : level === "Medium" ? "Monitor closely" : "Low priority";
           const active = sortFilter === level;
           return (
@@ -165,6 +185,16 @@ export default function AlertsSettingsPage() {
         </div>
 
         {/* Scrollable rows */}
+        {error ? (
+          <div className="p-8 text-center">
+            <p className="text-sm text-red-600 font-medium">Failed to load alerts: {error}</p>
+            <p className="text-xs text-red-500 mt-1">Check that the backend API is running.</p>
+          </div>
+        ) : loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-zinc-600" />
+          </div>
+        ) : (
         <div className="max-h-[400px] divide-y divide-zinc-100 overflow-y-auto">
           {filtered.map((n) => {
             const level = n.risk_level as RiskLevel;
@@ -202,6 +232,7 @@ export default function AlertsSettingsPage() {
             );
           })}
         </div>
+        )}
       </section>
 
       {/* Settings grid */}

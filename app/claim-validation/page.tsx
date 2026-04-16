@@ -1,48 +1,25 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-
-// 1. ADD THIS INTERFACE: This kills the "Unexpected any" errors
-interface Claim {
-  claim_id: string;
-  text: string;
-  source: string;
-  status: "Verified" | "Disputed" | "Unverified";
-  confidence: string;
-}
+import { apiFetch } from "@/lib/api"
+import type { ClaimListResponse, ClaimItem } from "@/lib/types/claim"
 
 export default function ClaimValidationPage() {
-  // 2. USE THE INTERFACE: Replace <any[]> with <Claim[]>
-  const [claims, setClaims] = useState<Claim[]>([])
+  const [claims, setClaims] = useState<ClaimItem[]>([])
   const [stats, setStats] = useState({ total: 0, verified: 0, disputed: 0, under_review: 0 })
   const [loading, setLoading] = useState(true) // Start as true to avoid the useEffect error
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
 
   useEffect(() => {
-    // 3. REMOVED setLoading(true) from here. 
-    // Since it's initialized as true above, this line is redundant and triggers a lint error.
-
-    fetch("/mock/mockdata.json")
-      .then((res) => {
-        if (!res.ok) throw new Error("Could not find mockdata.json");
-        return res.json();
-      })
-      .then((fullData) => {
-        const claimsData: Claim[] = fullData.claim_validation || [];
-        setClaims(claimsData);
-
-        const calculatedStats = {
-          total: claimsData.length,
-          verified: claimsData.filter((c) => c.status === "Verified").length,
-          disputed: claimsData.filter((c) => c.status === "Disputed").length,
-          under_review: claimsData.filter((c) => c.status === "Unverified").length,
-        };
-        setStats(calculatedStats);
+    apiFetch<ClaimListResponse>("/claims")
+      .then((response) => {
+        setClaims(response.data);
+        setStats(response.stats);
         setError(null);
       })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false))
+      .catch((err) => setError(err instanceof Error ? err.message : String(err)))
+      .finally(() => setLoading(false));
   }, [])
 
   const visibleClaims = useMemo(() => {
@@ -67,7 +44,7 @@ export default function ClaimValidationPage() {
       <div className="p-8">
         <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
            <p className="text-sm text-red-600 font-medium">Failed to load claims: {error}</p>
-           <p className="text-xs text-red-500 mt-1">Check if public/mock/mockdata.json exists.</p>
+           <p className="text-xs text-red-500 mt-1">Check that the backend API is running.</p>
         </div>
       </div>
     )
