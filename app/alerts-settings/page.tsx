@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import type { AlertListResponse, AlertItem } from "@/lib/types/alert";
+import { alertItemAsNarrativeHandoff, stashNarrativeHandoff } from "@/lib/narrativeHandoff";
 import { useNotifications } from "@/components/layout/NotificationContext";
 import { useSidebar } from "@/components/layout/SidebarContext";
 import { useTheme } from "@/components/layout/ThemeContext";
@@ -220,7 +221,10 @@ export default function AlertsSettingsPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => router.push(`/narrative-discovery?id=${n.id}`)}
+                  onClick={() => {
+                    stashNarrativeHandoff(alertItemAsNarrativeHandoff(n));
+                    router.push(`/narrative-discovery?id=${n.id}`);
+                  }}
                   className="shrink-0 cursor-pointer rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-700"
                 >
                   View
