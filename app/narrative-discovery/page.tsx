@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import type { NarrativeListResponse, NarrativeItem } from "@/lib/types/narrative";
@@ -191,53 +192,75 @@ function NarrativeDiscoveryInner() {
 }
 
 function NarrativeDetailDialog({ narrative, onClose }: { narrative: NarrativeItem; onClose: () => void }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  return (
-    <div className="backdrop-enter fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="dialog-enter w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl dark:bg-zinc-800" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">{narrative.title}</h2>
-            <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mt-1">{narrative.category}</p>
+  if (!mounted) return null;
+
+  return createPortal(
+    <div
+      className="backdrop-enter fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto bg-black/60 px-4 pb-10 pt-16 backdrop-blur-sm sm:pt-20"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        className="dialog-enter my-2 w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl dark:bg-zinc-800"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="narrative-dialog-title"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 id="narrative-dialog-title" className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+              {narrative.title}
+            </h2>
+            <p className="mt-1 text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{narrative.category}</p>
           </div>
-          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${riskBadgeClasses(narrative.risk_level)}`}>
+          <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${riskBadgeClasses(narrative.risk_level)}`}>
             {narrative.risk_level} RISK
           </span>
         </div>
 
         <p className="mt-4 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">{narrative.detail || narrative.description}</p>
 
-        <div className="mt-6 grid grid-cols-2 gap-4 bg-zinc-50 p-4 rounded-xl border border-zinc-100 dark:bg-zinc-900/50 dark:border-zinc-700">
+        <div className="mt-6 grid grid-cols-2 gap-4 rounded-xl border border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/50">
           <div>
-            <dt className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase font-bold">Analyzed</dt>
+            <dt className="text-[10px] font-bold uppercase text-zinc-400 dark:text-zinc-500">Analyzed</dt>
             <dd className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{narrative.videos_analyzed?.toLocaleString()} Videos</dd>
           </div>
           <div>
-            <dt className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase font-bold">Views</dt>
+            <dt className="text-[10px] font-bold uppercase text-zinc-400 dark:text-zinc-500">Views</dt>
             <dd className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{narrative.total_views}</dd>
           </div>
           <div>
-            <dt className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase font-bold">Risk Score</dt>
+            <dt className="text-[10px] font-bold uppercase text-zinc-400 dark:text-zinc-500">Risk Score</dt>
             <dd className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{narrative.risk_score}/10</dd>
           </div>
           <div>
-            <dt className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase font-bold">Window</dt>
+            <dt className="text-[10px] font-bold uppercase text-zinc-400 dark:text-zinc-500">Window</dt>
             <dd className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{narrative.time_window}</dd>
           </div>
         </div>
 
         <button
+          type="button"
           onClick={onClose}
-          className="mt-6 w-full h-10 bg-zinc-100 text-zinc-900 font-semibold rounded-lg hover:bg-zinc-200 transition-colors dark:bg-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-600"
+          className="mt-6 h-10 w-full rounded-lg bg-zinc-100 font-semibold text-zinc-900 transition-colors hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-600"
         >
           Close
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
