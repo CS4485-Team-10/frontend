@@ -1,10 +1,11 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import type { NarrativeListResponse, NarrativeItem } from "@/lib/types/narrative";
+import { stashNarrativeHandoff, clearNarrativeHandoff, useNarrativeHandoff } from "@/lib/narrativeHandoff";
 
 type RiskLevel = "High" | "Medium" | "Low";
 
@@ -68,18 +69,24 @@ function NarrativeDiscoveryInner() {
     return () => { cancelled = true; };
   }, [sortBy, debouncedSearch]);
 
-  // URL + loaded data determine which narrative is open (derived state — no effect).
+  const idParam = searchParams.get("id");
+  const handoffNarrative = useNarrativeHandoff(idParam);
+
+  // Prefer list data when loaded; otherwise use session handoff (e.g. from Alerts View).
   const activeNarrative = useMemo(() => {
-    const id = searchParams.get("id");
-    if (!id || narratives.length === 0) return null;
-    return narratives.find((n) => String(n.id) === String(id)) ?? null;
-  }, [searchParams, narratives]);
+    if (!idParam) return null;
+    const fromList = narratives.find((n) => String(n.id) === String(idParam));
+    if (fromList) return fromList;
+    return handoffNarrative;
+  }, [idParam, narratives, handoffNarrative]);
 
   function openNarrative(n: NarrativeItem) {
+    stashNarrativeHandoff(n);
     router.replace(`/narrative-discovery?id=${n.id}`, { scroll: false });
   }
 
   function closeNarrative() {
+    if (idParam) clearNarrativeHandoff(idParam);
     router.replace("/narrative-discovery", { scroll: false });
   }
 
@@ -191,12 +198,16 @@ function NarrativeDiscoveryInner() {
   );
 }
 
-function NarrativeDetailDialog({ narrative, onClose }: { narrative: NarrativeItem; onClose: () => void }) {
-  const [mounted, setMounted] = useState(false);
+function useIsClient() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+function NarrativeDetailDialog({ narrative, onClose }: { narrative: NarrativeItem; onClose: () => void }) {
+  const isClient = useIsClient();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -204,7 +215,7 @@ function NarrativeDetailDialog({ narrative, onClose }: { narrative: NarrativeIte
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  if (!mounted) return null;
+  if (!isClient) return null;
 
   return createPortal(
     <div

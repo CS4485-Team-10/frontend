@@ -41,7 +41,7 @@ function StatIcon({ kind }: { kind: StatKind }) {
 
 function statusBadgeClasses(status: string) {
   const s = status.trim().toLowerCase()
-  if (s === "verified")
+  if (s === "verified" || s === "verified_true")
     return "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-200 dark:ring-emerald-800/60"
   if (s === "disputed")
     return "bg-red-50 text-red-800 ring-1 ring-red-100 dark:bg-red-950/40 dark:text-red-200 dark:ring-red-800/60"
@@ -50,6 +50,10 @@ function statusBadgeClasses(status: string) {
   if (s === "unverifiable")
     return "bg-zinc-100 text-zinc-700 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-600"
   return "bg-amber-50 text-amber-800 ring-1 ring-amber-100 dark:bg-amber-950/40 dark:text-amber-200 dark:ring-amber-800/60"
+}
+
+function normalizeClaimStatus(status: string) {
+  return status.trim().toLowerCase()
 }
 
 function mergeUniqueSorted(apiList: string[] | undefined, derived: string[]): string[] {
@@ -66,7 +70,6 @@ function mergeUniqueSorted(apiList: string[] | undefined, derived: string[]): st
 export default function ClaimValidationPage() {
   const [claims, setClaims] = useState<ClaimItem[]>([])
   const [filterMeta, setFilterMeta] = useState<ClaimFilterOptions | undefined>(undefined)
-  const [stats, setStats] = useState({ total: 0, verified: 0, disputed: 0, under_review: 0 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
@@ -83,16 +86,9 @@ export default function ClaimValidationPage() {
   const filterWrapRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    if (!filterOpen) return
-    setFilterDraftStatus(statusFilter)
-    setFilterDraftConfidence(confidenceFilter)
-  }, [filterOpen])
-
-  useEffect(() => {
     apiFetch<ClaimListResponse>("/claims")
       .then((response) => {
         setClaims(response.data)
-        setStats(response.stats)
         setFilterMeta(response.filter_options)
         setError(null)
       })
@@ -118,6 +114,26 @@ export default function ClaimValidationPage() {
     [claims, filterMeta],
   )
 
+  const summaryStats = useMemo(() => {
+    let verified = 0
+    let underReview = 0
+
+    for (const claim of claims) {
+      const status = normalizeClaimStatus(claim.status)
+      if (status === "verified" || status === "verified_true") {
+        verified += 1
+      } else {
+        underReview += 1
+      }
+    }
+
+    return {
+      total: claims.length,
+      verified,
+      under_review: underReview,
+    }
+  }, [claims])
+
   const hasActiveFilters = Boolean(statusFilter || confidenceFilter)
 
   const visibleClaims = useMemo(() => {
@@ -134,14 +150,6 @@ export default function ClaimValidationPage() {
 
   const totalPages = Math.max(1, Math.ceil(visibleClaims.length / pageSize))
   const safePage = Math.min(page, totalPages)
-
-  useEffect(() => {
-    setPage(1)
-  }, [search, statusFilter, confidenceFilter])
-
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages)
-  }, [page, totalPages, pageSize])
 
   useEffect(() => {
     function onPointerDown(e: PointerEvent) {
@@ -211,17 +219,19 @@ export default function ClaimValidationPage() {
             type="search"
             placeholder="Search claims or sources..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPage(1)
+            }}
             className="h-10 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/20"
           />
         </div>
       </header>
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard kind="total" title="Total claims" value={stats.total} subtitle="In current dataset" />
-        <StatCard kind="verified" title="Verified" value={stats.verified} subtitle="High confidence" />
-        <StatCard kind="disputed" title="Disputed" value={stats.disputed} subtitle="Flagged for review" />
-        <StatCard kind="review" title="Under review" value={stats.under_review} subtitle="Pending validation" />
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard kind="total" title="Total claims" value={summaryStats.total} subtitle="In current dataset" />
+        <StatCard kind="verified" title="Verified" value={summaryStats.verified} subtitle="High confidence" />
+        <StatCard kind="review" title="Under review" value={summaryStats.under_review} subtitle="Pending validation" />
       </section>
 
       <section className="rounded-xl border border-zinc-200 bg-white shadow-[0_1px_0_rgba(0,0,0,0.04)] dark:border-zinc-700 dark:bg-zinc-800 dark:shadow-none">
@@ -236,7 +246,13 @@ export default function ClaimValidationPage() {
                 type="button"
                 aria-expanded={filterOpen}
                 aria-haspopup="dialog"
-                onClick={() => setFilterOpen((o) => !o)}
+                onClick={() => {
+                  if (!filterOpen) {
+                    setFilterDraftStatus(statusFilter)
+                    setFilterDraftConfidence(confidenceFilter)
+                  }
+                  setFilterOpen((o) => !o)
+                }}
                 className={`inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-xs font-medium transition-colors dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 ${
                   hasActiveFilters
                     ? "border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800 dark:border-zinc-200 dark:bg-zinc-200 dark:text-zinc-900 dark:hover:bg-white"
@@ -416,7 +432,12 @@ export default function ClaimValidationPage() {
                     <button
                       type="button"
                       disabled={safePage <= 1}
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      onClick={() =>
+                        setPage((p) => {
+                          const current = Math.min(Math.max(1, p), totalPages)
+                          return Math.max(1, current - 1)
+                        })
+                      }
                       className="rounded-md px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-700"
                     >
                       Previous
@@ -427,7 +448,12 @@ export default function ClaimValidationPage() {
                     <button
                       type="button"
                       disabled={safePage >= totalPages}
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      onClick={() =>
+                        setPage((p) => {
+                          const current = Math.min(Math.max(1, p), totalPages)
+                          return Math.min(totalPages, current + 1)
+                        })
+                      }
                       className="rounded-md px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-700"
                     >
                       Next
