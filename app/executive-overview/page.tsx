@@ -50,6 +50,11 @@ function formatClaimStatus(status: string) {
   return status.replace(/_/g, " ");
 }
 
+function isVerifiedClaimStatus(status: string) {
+  const normalized = status.trim().toLowerCase();
+  return normalized === "verified" || normalized === "verified_true";
+}
+
 type MetricKey =
   | "total_videos_scoped"
   | "active_narratives"
@@ -233,15 +238,21 @@ export default function ExecutiveOverviewPage() {
   const [data, setData] = useState<ExecutiveOverviewResponse | null>(null);
   const [clusters, setClusters] = useState<TopicCluster[]>([]);
   const [claims, setClaims] = useState<ClaimItem[]>([]);
+  const [allClaims, setAllClaims] = useState<ClaimItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [claimStatusFilter, setClaimStatusFilter] = useState<"all" | "verified" | "unverifiable">("all");
   const [claimsLoading, setClaimsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([apiFetch<ExecutiveOverviewResponse>("/overview/executive"), apiFetch<TopicClustersResponse>("/overview/topic-clusters")])
-      .then(([execData, clusterData]) => {
+    Promise.all([
+      apiFetch<ExecutiveOverviewResponse>("/overview/executive"),
+      apiFetch<TopicClustersResponse>("/overview/topic-clusters"),
+      apiFetch<ClaimListResponse>("/claims"),
+    ])
+      .then(([execData, clusterData, allClaimData]) => {
         setData(execData);
         setClusters(clusterData.clusters);
+        setAllClaims(allClaimData.data);
       })
       .catch((err) => setError(err instanceof Error ? err.message : String(err)));
   }, []);
@@ -265,6 +276,8 @@ export default function ExecutiveOverviewPage() {
   if (error) return <div className="p-8 text-red-600 dark:text-red-400">Failed to load: {error}</div>;
   if (!data) return <div className="p-8 text-zinc-500 dark:text-zinc-400">Loading...</div>;
 
+  const verifiedClaimsCount = allClaims.filter((claim) => isVerifiedClaimStatus(claim.status)).length;
+
   const meta = data.overview_metrics_meta;
   const overviewMetrics: OverviewMetricCard[] = [
     {
@@ -284,7 +297,7 @@ export default function ExecutiveOverviewPage() {
     {
       key: "verified_claims",
       title: "Verified Claims",
-      value: data.verified_claims,
+      value: verifiedClaimsCount,
       subLabel: `${meta.verified_claims.accuracy_pct}% ${meta.verified_claims.accuracy_label}`,
       icon: "claims",
     },
