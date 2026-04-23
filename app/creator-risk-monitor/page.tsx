@@ -266,27 +266,27 @@ const CreatorCard = ({ creator }: { creator: Creator }) => {
 
   return (
     <div className="flex aspect-square w-full flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
-      <div className="flex shrink-0 items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+      <div className="flex shrink-0 items-start gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
           <div className="flex size-11 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-700">
             <span className="text-lg font-bold text-zinc-500 dark:text-zinc-300">{initial}</span>
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1 pt-0.5">
             <h3 className="truncate text-sm font-bold leading-tight text-zinc-900 dark:text-zinc-100">{creator.handle}</h3>
-            <div
-              className={`mt-1 inline-flex max-w-full items-center truncate rounded border px-2 py-0.5 text-[10px] font-bold uppercase ${status.bg} ${status.color} ${status.border}`}
-            >
-              {status.label}
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase text-zinc-400 dark:text-zinc-500">Reach</span>
+              <span className="text-sm font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{creator.reach}</span>
             </div>
           </div>
         </div>
-        <div className="shrink-0 text-right">
-          <p className="text-[10px] font-bold uppercase text-zinc-400 dark:text-zinc-500">Reach</p>
-          <p className="text-sm font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{creator.reach}</p>
-        </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center rounded-lg border border-zinc-100 bg-zinc-50 px-2 py-2 dark:border-zinc-700 dark:bg-zinc-900/50">
+      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center rounded-lg border border-zinc-100 bg-zinc-50 px-2 py-2 dark:border-zinc-700 dark:bg-zinc-900/50">
+        <div
+          className={`absolute right-3 top-3 rounded border px-2 py-0.5 text-[10px] font-bold uppercase ${status.bg} ${status.color} ${status.border}`}
+        >
+          {status.label}
+        </div>
         <RiskGauge score={creator.risk_score} />
         <div className="-mt-0.5 text-center leading-none">
           <span className="text-2xl font-black tabular-nums text-zinc-900 dark:text-zinc-100">{creator.risk_score}</span>
@@ -294,16 +294,10 @@ const CreatorCard = ({ creator }: { creator: Creator }) => {
         </div>
       </div>
 
-      <div className="mt-auto shrink-0 space-y-2">
-        <div className="flex items-center justify-between border-b border-zinc-50 pb-1.5 dark:border-zinc-700/50">
+      <div className="mt-4 shrink-0">
+        <div className="flex items-center justify-between border-t border-zinc-100 pt-3 dark:border-zinc-700/50">
           <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Flagged Claims</span>
           <span className="text-sm font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{creator.flagged_claims}</span>
-        </div>
-        <div className="flex items-start justify-between gap-2 border-b border-zinc-50 pb-1.5 dark:border-zinc-700/50">
-          <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Verification</span>
-          <span className="max-w-[58%] text-right text-[10px] font-bold uppercase leading-tight text-zinc-400 dark:text-zinc-500">
-            Awaiting Manual Audit
-          </span>
         </div>
       </div>
     </div>
