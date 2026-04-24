@@ -8,6 +8,8 @@ import type { NarrativeListResponse, NarrativeItem } from "@/lib/types/narrative
 import { stashNarrativeHandoff, clearNarrativeHandoff, useNarrativeHandoff } from "@/lib/narrativeHandoff";
 
 type RiskLevel = "High" | "Medium" | "Low";
+const NARRATIVES_PER_PAGE_OPTIONS = [6, 9, 12, 18] as const;
+type NarrativesPerPage = (typeof NARRATIVES_PER_PAGE_OPTIONS)[number];
 
 // Helpers
 function riskBadgeClasses(level: RiskLevel) {
@@ -17,6 +19,20 @@ function riskBadgeClasses(level: RiskLevel) {
     case "Low":    return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100";
     default:       return "bg-zinc-50 text-zinc-700 ring-1 ring-zinc-100";
   }
+}
+
+function getNarrativeBodyText(narrative: NarrativeItem) {
+  const description = narrative.description?.trim();
+  const detail = narrative.detail?.trim();
+
+  if (!detail) return description || "No description available.";
+
+  // Some backend rows send a raw JSON blob in `detail`; don't show that in the modal.
+  if (detail.startsWith("{") || detail.startsWith("[")) {
+    return description || "No description available.";
+  }
+
+  return detail || description || "No description available.";
 }
 
 type SortOption = "trending" | "risk" | "views";
@@ -39,6 +55,8 @@ function NarrativeDiscoveryInner() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("trending");
+  const [page, setPage] = useState(1);
+  const [narrativesPerPage, setNarrativesPerPage] = useState<NarrativesPerPage>(6);
 
   // Debounce search input
   useEffect(() => {
@@ -58,6 +76,7 @@ function NarrativeDiscoveryInner() {
         });
         if (!cancelled) {
           setNarratives(response.data);
+          setPage(1);
           setError(null);
         }
       } catch (err) {
@@ -91,6 +110,14 @@ function NarrativeDiscoveryInner() {
   }
 
   const visibleNarratives = narratives;
+  const totalPages = Math.max(1, Math.ceil(visibleNarratives.length / narrativesPerPage));
+  const safePage = Math.min(page, totalPages);
+  const pageNarratives = useMemo(() => {
+    const start = (safePage - 1) * narrativesPerPage;
+    return visibleNarratives.slice(start, start + narrativesPerPage);
+  }, [narrativesPerPage, safePage, visibleNarratives]);
+  const rangeStart = visibleNarratives.length === 0 ? 0 : (safePage - 1) * narrativesPerPage + 1;
+  const rangeEnd = visibleNarratives.length === 0 ? 0 : Math.min(visibleNarratives.length, rangeStart + pageNarratives.length - 1);
 
   if (error) {
     return (
@@ -125,7 +152,10 @@ function NarrativeDiscoveryInner() {
             type="search"
             placeholder="Search narratives..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             className="h-10 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/20"
           />
         </div>
@@ -134,7 +164,10 @@ function NarrativeDiscoveryInner() {
           <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Sort by</span>
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            onChange={(e) => {
+              setSortBy(e.target.value as SortOption);
+              setPage(1);
+            }}
             className="h-10 cursor-pointer appearance-none rounded-lg border border-zinc-200 bg-white px-3 pr-8 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/20"
           >
             <option value="trending">Trending</option>
@@ -146,25 +179,30 @@ function NarrativeDiscoveryInner() {
 
       {loading ? (
         <p className="text-sm text-zinc-500 dark:text-zinc-400 animate-pulse">Scanning social data...</p>
+      ) : visibleNarratives.length === 0 ? (
+        <div className="rounded-xl border border-zinc-200 bg-white p-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+          No narratives match your search.
+        </div>
       ) : (
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {visibleNarratives.map((narrative) => (
+        <>
+        <section className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {pageNarratives.map((narrative) => (
             <article
               key={narrative.id}
-              className="flex flex-col justify-between rounded-xl border border-zinc-200 bg-white p-5 shadow-sm hover:border-zinc-300 transition-all dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-zinc-500"
+              className="flex min-h-[360px] flex-col justify-between rounded-xl border border-zinc-200 bg-white p-6 shadow-sm transition-all hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-zinc-500"
             >
               <div>
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{narrative.title}</h3>
-                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2">{narrative.description}</p>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{narrative.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">{narrative.description}</p>
                   </div>
                   <span className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${riskBadgeClasses(narrative.risk_level)}`}>
                     {narrative.risk_level}
                   </span>
                 </div>
 
-                <dl className="mt-4 space-y-1.5 text-xs">
+                <dl className="mt-5 space-y-2 text-sm">
                   <div className="flex justify-between">
                     <dt className="text-zinc-500 dark:text-zinc-400">Videos:</dt>
                     <dd className="font-medium text-zinc-900 dark:text-zinc-100">{narrative.videos_analyzed?.toLocaleString()}</dd>
@@ -182,13 +220,73 @@ function NarrativeDiscoveryInner() {
 
               <button
                 onClick={() => openNarrative(narrative)}
-                className="mt-4 inline-flex h-9 w-full items-center justify-center rounded-lg bg-zinc-900 text-sm font-medium text-white hover:bg-zinc-700 transition-colors dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+                className="mt-6 inline-flex h-10 w-full items-center justify-center rounded-lg bg-zinc-900 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
               >
                 Explore Narrative
               </button>
             </article>
           ))}
         </section>
+        <div className="mt-6 flex flex-col gap-4 border-t border-zinc-200 pt-5 dark:border-zinc-700 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Showing <span className="font-semibold text-zinc-900 dark:text-zinc-100">{rangeStart}</span>
+            {"–"}
+            <span className="font-semibold text-zinc-900 dark:text-zinc-100">{rangeEnd}</span>
+            {" of "}
+            <span className="font-semibold text-zinc-900 dark:text-zinc-100">{visibleNarratives.length}</span> narratives
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              <span className="whitespace-nowrap">Rows per page</span>
+              <select
+                value={narrativesPerPage}
+                onChange={(e) => {
+                  setNarrativesPerPage(Number(e.target.value) as NarrativesPerPage);
+                  setPage(1);
+                }}
+                className="cursor-pointer rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-800 shadow-sm focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/20"
+              >
+                {NARRATIVES_PER_PAGE_OPTIONS.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+          <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white p-0.5 dark:border-zinc-600 dark:bg-zinc-800">
+            <button
+              type="button"
+              disabled={safePage <= 1}
+              onClick={() =>
+                setPage((p) => {
+                  const current = Math.min(Math.max(1, p), totalPages);
+                  return Math.max(1, current - 1);
+                })
+              }
+              className="rounded-md px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-700"
+            >
+              Previous
+            </button>
+            <span className="border-l border-r border-zinc-100 px-3 py-1 text-xs tabular-nums text-zinc-600 dark:border-zinc-600 dark:text-zinc-400">
+              Page <span className="font-semibold text-zinc-900 dark:text-zinc-100">{safePage}</span> / {totalPages}
+            </span>
+            <button
+              type="button"
+              disabled={safePage >= totalPages}
+              onClick={() =>
+                setPage((p) => {
+                  const current = Math.min(Math.max(1, p), totalPages);
+                  return Math.min(totalPages, current + 1);
+                })
+              }
+              className="rounded-md px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-700"
+            >
+              Next
+            </button>
+          </div>
+          </div>
+        </div>
+        </>
       )}
 
       {activeNarrative && (
@@ -208,6 +306,7 @@ function useIsClient() {
 
 function NarrativeDetailDialog({ narrative, onClose }: { narrative: NarrativeItem; onClose: () => void }) {
   const isClient = useIsClient();
+  const narrativeBodyText = getNarrativeBodyText(narrative);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -242,7 +341,7 @@ function NarrativeDetailDialog({ narrative, onClose }: { narrative: NarrativeIte
           </span>
         </div>
 
-        <p className="mt-4 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">{narrative.detail || narrative.description}</p>
+        <p className="mt-4 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">{narrativeBodyText}</p>
 
         <div className="mt-6 grid grid-cols-2 gap-4 rounded-xl border border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/50">
           <div>
