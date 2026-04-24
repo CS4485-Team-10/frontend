@@ -1,8 +1,16 @@
-import React from 'react';
+"use client";
+
+import React, { useState } from 'react';
 import mockData from '@/public/mock/mockdata.json';
 
 const CreatorRiskMonitor = () => {
   const creators = mockData.creator_risk_monitor;
+  const [creatorSearch, setCreatorSearch] = useState("");
+
+  const term = creatorSearch.trim().toLowerCase();
+  const filtered = term === ""
+    ? creators
+    : creators.filter((c) => c.handle.toLowerCase().includes(term));
 
   return (
     <div className="p-8 bg-zinc-50 min-h-screen">
@@ -14,12 +22,14 @@ const CreatorRiskMonitor = () => {
         </div>
         <div className="flex gap-3">
           <div className="flex flex-col">
-            <label className="text-[10px] font-bold text-zinc-400 uppercase ml-1 mb-1">Filter by Narrative</label>
-            <select className="border border-zinc-200 rounded-lg px-3 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-zinc-200">
-              <option>All Narratives</option>
-              <option>Ozempic Weight Loss</option>
-              <option>COVID-19 Supplements</option>
-            </select>
+            <label className="text-[10px] font-bold text-zinc-400 uppercase ml-1 mb-1">Filter by Creator</label>
+            <input
+              type="text"
+              value={creatorSearch}
+              onChange={(e) => setCreatorSearch(e.target.value)}
+              placeholder="Search creators…"
+              className="border border-zinc-200 rounded-lg px-3 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-zinc-200"
+            />
           </div>
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-zinc-400 uppercase ml-1 mb-1">Sort Order</label>
@@ -33,7 +43,7 @@ const CreatorRiskMonitor = () => {
 
       {/* Grid Layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {creators.map((creator, index) => (
+        {filtered.map((creator, index) => (
           <CreatorCard key={index} creator={creator} />
         ))}
       </div>
