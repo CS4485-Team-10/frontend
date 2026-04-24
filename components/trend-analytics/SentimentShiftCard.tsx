@@ -42,12 +42,13 @@ export default function SentimentShiftCard({ range }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    setError(null);
     apiFetch<SentimentShiftResponse>(
       `/overview/sentiment-shift?range=${range}`
     )
       .then((res) => {
-        if (!cancelled) setShift(res);
+        if (cancelled) return;
+        setError(null);
+        setShift(res);
       })
       .catch((err: Error) => {
         if (!cancelled) setError(err.message);

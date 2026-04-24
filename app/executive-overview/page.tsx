@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import type {
+  ExecutiveOverviewResponse,
+  TopicCluster,
+} from "@/lib/types/executive-overview";
 
 // Using a standard fetch since apiFetch was pointing to missing API routes
 function formatNumber(value: number) {
@@ -112,7 +116,7 @@ function SimpleLineChart({ topicTrends }: { topicTrends: Array<Record<string, st
   );
 }
 
-function BubbleChart({ clusters }: { clusters: any[] }) {
+function BubbleChart({ clusters }: { clusters: TopicCluster[] }) {
   const width = 340;
   const height = 220;
   return (
@@ -129,8 +133,8 @@ function BubbleChart({ clusters }: { clusters: any[] }) {
 }
 
 export default function ExecutiveOverviewPage() {
-  const [data, setData] = useState<any>(null);
-  const [clusters, setClusters] = useState<any[]>([]);
+  const [data, setData] = useState<ExecutiveOverviewResponse | null>(null);
+  const [clusters, setClusters] = useState<TopicCluster[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {

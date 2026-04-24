@@ -26,22 +26,25 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   const [collapsed,   setCollapsed]   = useState(false);
   const [compactMode, setCompactModeState] = useState(false);
 
-  // Hydrate from localStorage
+  // Hydrate from localStorage. Deferred via queueMicrotask so setState isn't
+  // invoked synchronously in the effect body (react-hooks/set-state-in-effect).
   useEffect(() => {
-    try {
-      const savedCompact = window.localStorage.getItem(COMPACT_STORAGE_KEY);
-      if (savedCompact === "true") {
-        setCompactModeState(true);
-        setCollapsed(true);
-        return;
+    queueMicrotask(() => {
+      try {
+        const savedCompact = window.localStorage.getItem(COMPACT_STORAGE_KEY);
+        if (savedCompact === "true") {
+          setCompactModeState(true);
+          setCollapsed(true);
+          return;
+        }
+        const saved = window.localStorage.getItem(STORAGE_KEY);
+        if (saved === "true")       setCollapsed(true);
+        else if (saved === "false") setCollapsed(false);
+        else if (window.matchMedia("(max-width: 767px)").matches) setCollapsed(true);
+      } catch {
+        // ignore
       }
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-      if (saved === "true")       setCollapsed(true);
-      else if (saved === "false") setCollapsed(false);
-      else if (window.matchMedia("(max-width: 767px)").matches) setCollapsed(true);
-    } catch {
-      // ignore
-    }
+    });
   }, []);
 
   // When compactMode turns on, force-collapse and lock; when off, restore

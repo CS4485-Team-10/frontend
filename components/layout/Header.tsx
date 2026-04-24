@@ -10,25 +10,16 @@ import { User, Settings, LogOut, Info, ChevronDown, Bell } from "lucide-react";
 
 const allNarratives = mock.narrative_discovery;
 
-function riskBadgeClasses(level: string) {
-  if (level === "High")   return "bg-red-50 text-red-700 ring-1 ring-red-100";
-  if (level === "Medium") return "bg-amber-50 text-amber-700 ring-1 ring-amber-100";
-  return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100";
-}
-
 export function Header() {
   const router = useRouter();
-  const { collapsed, compactMode, toggle } = useSidebar();
+  const { compactMode, toggle } = useSidebar();
   const { notifHighRisk, notifMediumRisk } = useNotifications();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isBellOpen, setIsBellOpen] = useState(false);
-  const [isNavBtnAnimating, setIsNavBtnAnimating] = useState(false);
 
   function handleGoToAlerts() {
-    setIsNavBtnAnimating(true);
     setTimeout(() => {
       setIsBellOpen(false);
-      setIsNavBtnAnimating(false);
       router.push("/alerts-settings");
     }, 300);
   }

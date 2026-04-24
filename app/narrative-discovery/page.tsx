@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import type { NarrativeItem } from "@/lib/types/narrative";
 
 type RiskLevel = "High" | "Medium" | "Low";
 
@@ -42,16 +43,13 @@ function NarrativeDiscoveryInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [narratives, setNarratives] = useState<any[]>([]);
+  const [narratives, setNarratives] = useState<NarrativeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("trending");
-  const [activeNarrative, setActiveNarrative] = useState<any | null>(null);
 
-  // 1. Fetch from local mockdata.json
   useEffect(() => {
-    setLoading(true);
     fetch("/mock/mockdata.json")
       .then((res) => {
         if (!res.ok) throw new Error("Could not find mockdata.json");
@@ -65,21 +63,17 @@ function NarrativeDiscoveryInner() {
       .finally(() => setLoading(false));
   }, []);
 
-  // 2. Deep-link logic
-  useEffect(() => {
+  const activeNarrative = useMemo<NarrativeItem | null>(() => {
     const id = searchParams.get("id");
-    if (!id || narratives.length === 0) return;
-    const found = narratives.find((n) => String(n.id) === String(id)) ?? null;
-    setActiveNarrative(found);
+    if (!id || narratives.length === 0) return null;
+    return narratives.find((n) => String(n.id) === String(id)) ?? null;
   }, [searchParams, narratives]);
 
-  function openNarrative(n: any) {
-    setActiveNarrative(n);
+  function openNarrative(n: NarrativeItem) {
     router.replace(`/narrative-discovery?id=${n.id}`, { scroll: false });
   }
 
   function closeNarrative() {
-    setActiveNarrative(null);
     router.replace("/narrative-discovery", { scroll: false });
   }
 
@@ -215,7 +209,7 @@ function NarrativeDiscoveryInner() {
 // ---------------------------------------------------------------------------
 // Modal Component
 // ---------------------------------------------------------------------------
-function NarrativeDetailDialog({ narrative, onClose }: { narrative: any; onClose: () => void }) {
+function NarrativeDetailDialog({ narrative, onClose }: { narrative: NarrativeItem; onClose: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);

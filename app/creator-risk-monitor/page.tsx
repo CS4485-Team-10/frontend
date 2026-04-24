@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import mockData from '@/public/mock/mockdata.json';
 
+type Creator = (typeof mockData.creator_risk_monitor)[number];
+
 const CreatorRiskMonitor = () => {
   const creators = mockData.creator_risk_monitor;
   const [creatorSearch, setCreatorSearch] = useState("");
@@ -51,7 +53,7 @@ const CreatorRiskMonitor = () => {
   );
 };
 
-const CreatorCard = ({ creator }: { creator: any }) => {
+const CreatorCard = ({ creator }: { creator: Creator }) => {
   // Normalize score for the gauge (if score is 1-10, multiply by 10 for percentage)
   const scorePercent = creator.risk_score * 10;
   

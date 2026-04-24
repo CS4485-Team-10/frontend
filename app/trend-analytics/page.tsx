@@ -32,8 +32,18 @@ type Narrative = {
   category: string;
 };
 
+type TrendData = {
+  executive_overview: {
+    topic_trends: TopicTrend[];
+    sentiment: { positive: number; neutral: number; negative: number };
+    verified_claims: number;
+    active_narratives: number;
+  };
+  narrative_discovery: Narrative[];
+};
+
 export default function TrendAnalyticsPage() {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<TrendData | null>(null);
   const [range, setRange] = useState("30d");
 
   useEffect(() => {
@@ -67,7 +77,7 @@ export default function TrendAnalyticsPage() {
     const cutoff = new Date();
     cutoff.setDate(now.getDate() - days);
 
-    return trends.filter((item: any) => {
+    return trends.filter((item: TopicTrend) => {
       return new Date(item.date) >= cutoff;
     });
   };

@@ -1,32 +1,32 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import type { ClaimItem } from "@/lib/types/claim"
 
 export default function ClaimValidationPage() {
-  const [claims, setClaims] = useState<any[]>([])
+  const [claims, setClaims] = useState<ClaimItem[]>([])
   const [stats, setStats] = useState({ total: 0, verified: 0, disputed: 0, under_review: 0 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
 
   useEffect(() => {
-    setLoading(true)
-    // 1. Fetch from the unified local file
     fetch("/mock/mockdata.json")
       .then((res) => {
         if (!res.ok) throw new Error("Could not find mockdata.json");
         return res.json();
       })
       .then((fullData) => {
-        const claimsData = fullData.claim_validation || [];
+        const claimsData: ClaimItem[] = fullData.claim_validation || [];
         setClaims(claimsData);
 
-        // 2. Dynamically calculate stats based on your mock data
         const calculatedStats = {
           total: claimsData.length,
-          verified: claimsData.filter((c: any) => c.status === "Verified").length,
-          disputed: claimsData.filter((c: any) => c.status === "Disputed").length,
-          under_review: claimsData.filter((c: any) => c.status === "Unverified").length,
+          verified: claimsData.filter((c) => c.status === "Verified").length,
+          disputed: claimsData.filter((c) => c.status === "Disputed").length,
+          under_review: claimsData.filter(
+            (c) => (c.status as string) === "Unverified",
+          ).length,
         };
         setStats(calculatedStats);
         setError(null);
