@@ -69,6 +69,7 @@ function mergeUniqueSorted(apiList: string[] | undefined, derived: string[]): st
 
 export default function ClaimValidationPage() {
   const [claims, setClaims] = useState<ClaimItem[]>([])
+  const [apiStats, setApiStats] = useState<{ total: number; verified: number; disputed: number; under_review: number } | undefined>(undefined)
   const [filterMeta, setFilterMeta] = useState<ClaimFilterOptions | undefined>(undefined)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -86,12 +87,29 @@ export default function ClaimValidationPage() {
   const filterWrapRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    apiFetch<ClaimListResponse>("/claims")
-      .then((response) => {
-        setClaims(response.data)
-        setFilterMeta(response.filter_options)
-        setError(null)
-      })
+    const PAGE_LIMIT = 200
+    async function fetchAllClaims() {
+      const first = await apiFetch<ClaimListResponse>(`/claims?limit=${PAGE_LIMIT}&skip=0`)
+      const total = first.count
+      let all = first.data
+
+      if (total > PAGE_LIMIT) {
+        const remaining = Math.ceil((total - PAGE_LIMIT) / PAGE_LIMIT)
+        const pages = await Promise.all(
+          Array.from({ length: remaining }, (_, i) =>
+            apiFetch<ClaimListResponse>(`/claims?limit=${PAGE_LIMIT}&skip=${(i + 1) * PAGE_LIMIT}`)
+          )
+        )
+        for (const page of pages) all = all.concat(page.data)
+      }
+
+      setClaims(all)
+      setApiStats(first.stats)
+      setFilterMeta(first.filter_options)
+      setError(null)
+    }
+
+    fetchAllClaims()
       .catch((err) => setError(err instanceof Error ? err.message : String(err)))
       .finally(() => setLoading(false))
   }, [])
@@ -115,9 +133,16 @@ export default function ClaimValidationPage() {
   )
 
   const summaryStats = useMemo(() => {
+    if (apiStats) {
+      return {
+        total: apiStats.total,
+        verified: apiStats.verified,
+        under_review: apiStats.under_review,
+      }
+    }
+    // Fallback: derive from loaded claims if API stats not yet available
     let verified = 0
     let underReview = 0
-
     for (const claim of claims) {
       const status = normalizeClaimStatus(claim.status)
       if (status === "verified" || status === "verified_true") {
@@ -126,13 +151,8 @@ export default function ClaimValidationPage() {
         underReview += 1
       }
     }
-
-    return {
-      total: claims.length,
-      verified,
-      under_review: underReview,
-    }
-  }, [claims])
+    return { total: claims.length, verified, under_review: underReview }
+  }, [apiStats, claims])
 
   const hasActiveFilters = Boolean(statusFilter || confidenceFilter)
 
