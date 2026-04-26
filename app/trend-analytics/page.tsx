@@ -36,7 +36,7 @@ export default function TrendAnalyticsPage() {
   const [narratives, setNarratives] = useState<NarrativeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [range, setRange] = useState("30d");
+  const [range, setRange] = useState("6m");
 
   useEffect(() => {
     Promise.all([
