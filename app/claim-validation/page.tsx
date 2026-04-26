@@ -7,7 +7,7 @@ import type { ClaimListResponse, ClaimItem } from "@/lib/types/claim"
 export default function ClaimValidationPage() {
   const [claims, setClaims] = useState<ClaimItem[]>([])
   const [stats, setStats] = useState({ total: 0, verified: 0, disputed: 0, under_review: 0 })
-  const [loading, setLoading] = useState(true) // Start as true to avoid the useEffect error
+  const [loading, setLoading] = useState(true) 
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
 
@@ -83,7 +83,7 @@ export default function ClaimValidationPage() {
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Claims Database</h2>
           <div className="flex gap-3">
             <button className="text-sm font-medium border border-zinc-200 rounded-lg px-4 py-2 text-zinc-700 hover:bg-zinc-50 transition-colors dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-700">Filter</button>
-            <button className="text-sm font-medium border border-zinc-200 rounded-lg px-4 py-2 text-zinc-700 hover:bg-zinc-50 transition-colors dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-700">Export CSV</button>
+            {/* Export CSV button removed from here */}
           </div>
         </div>
 
