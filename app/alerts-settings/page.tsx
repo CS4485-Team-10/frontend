@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, apiPost } from "@/lib/api";
 import type { AlertListResponse, AlertItem } from "@/lib/types/alert";
 import { useNotifications } from "@/components/layout/NotificationContext";
 import { useSidebar } from "@/components/layout/SidebarContext";
@@ -87,6 +87,16 @@ export default function AlertsSettingsPage() {
   const { compactMode, setCompactMode } = useSidebar();
   const { isDark, toggle: toggleTheme } = useTheme();
 
+  const [subEmail, setSubEmail] = useState("");
+  const [subLoading, setSubLoading] = useState(false);
+  const [subMessage, setSubMessage] = useState("");
+  const [subError, setSubError] = useState(false);
+
+  const [unsubEmail, setUnsubEmail] = useState("");
+  const [unsubLoading, setUnsubLoading] = useState(false);
+  const [unsubMessage, setUnsubMessage] = useState("");
+  const [unsubError, setUnsubError] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -112,6 +122,47 @@ export default function AlertsSettingsPage() {
     })();
     return () => { cancelled = true; };
   }, [sortFilter]);
+
+  async function handleSubscribe() {
+    if (!notifHighRisk && !notifMediumRisk) {
+      setSubMessage("Select at least one risk level above.");
+      setSubError(true);
+      return;
+    }
+    setSubLoading(true);
+    setSubMessage("");
+    try {
+      const res = await apiPost<{ ok: boolean; detail: string }>("/alerts/subscribe", {
+        email: subEmail,
+        notify_high_risk: notifHighRisk,
+        notify_medium_risk: notifMediumRisk,
+      });
+      setSubMessage(res.detail);
+      setSubError(false);
+    } catch {
+      setSubMessage("Failed to subscribe. Please try again.");
+      setSubError(true);
+    } finally {
+      setSubLoading(false);
+    }
+  }
+
+  async function handleUnsubscribe() {
+    setUnsubLoading(true);
+    setUnsubMessage("");
+    try {
+      const res = await apiPost<{ ok: boolean; detail: string }>("/alerts/unsubscribe", {
+        email: unsubEmail,
+      });
+      setUnsubMessage(res.detail);
+      setUnsubError(!res.ok);
+    } catch {
+      setUnsubMessage("This email is not currently subscribed.");
+      setUnsubError(true);
+    } finally {
+      setUnsubLoading(false);
+    }
+  }
 
   const filterOptions: SortFilter[] = ["All", "High", "Medium", "Low"];
 
@@ -276,6 +327,70 @@ export default function AlertsSettingsPage() {
           >
             <Toggle enabled={notifMediumRisk} onChange={setNotifMediumRisk} />
           </SettingRow>
+
+          {/* Subscribe */}
+          <div className="pt-4 mt-2 border-t border-zinc-100 dark:border-zinc-700/50">
+            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+              Subscribe to Email Alerts
+            </p>
+            <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+              Receive narrative alerts at the selected risk levels above
+            </p>
+            <div className="mt-3 flex gap-2">
+              <input
+                type="email"
+                placeholder="you@example.com"
+                value={subEmail}
+                onChange={(e) => { setSubEmail(e.target.value); setSubMessage(""); }}
+                className="flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-zinc-900/20 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:ring-zinc-400/30"
+              />
+              <button
+                type="button"
+                onClick={handleSubscribe}
+                disabled={!subEmail || subLoading}
+                className="shrink-0 cursor-pointer rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-200 dark:text-zinc-900 dark:hover:bg-white"
+              >
+                {subLoading ? "..." : "Subscribe"}
+              </button>
+            </div>
+            {subMessage && (
+              <p className={`mt-2 text-xs ${subError ? "text-red-500" : "text-emerald-600 dark:text-emerald-400"}`}>
+                {subMessage}
+              </p>
+            )}
+          </div>
+
+          {/* Unsubscribe */}
+          <div className="pt-4 mt-2 border-t border-zinc-100 dark:border-zinc-700/50">
+            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+              Unsubscribe from Email Alerts
+            </p>
+            <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+              Stop receiving narrative alert emails
+            </p>
+            <div className="mt-3 flex gap-2">
+              <input
+                type="email"
+                placeholder="you@example.com"
+                value={unsubEmail}
+                onChange={(e) => { setUnsubEmail(e.target.value); setUnsubMessage(""); }}
+                className="flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-zinc-900/20 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:ring-zinc-400/30"
+              />
+              <button
+                type="button"
+                onClick={handleUnsubscribe}
+                disabled={!unsubEmail || unsubLoading}
+                className="shrink-0 cursor-pointer rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-red-400 dark:hover:bg-red-950/30"
+              >
+                {unsubLoading ? "..." : "Unsubscribe"}
+              </button>
+            </div>
+            {unsubMessage && (
+              <p className={`mt-2 text-xs ${unsubError ? "text-red-500" : "text-emerald-600 dark:text-emerald-400"}`}>
+                {unsubMessage}
+              </p>
+            )}
+          </div>
         </SectionCard>
       </div>
     </div>

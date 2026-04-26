@@ -15,3 +15,16 @@ export async function apiFetch<T>(
   if (!res.ok) throw new Error(`API ${path}: ${res.status}`);
   return res.json() as Promise<T>;
 }
+
+export async function apiPost<T>(
+  path: string,
+  body: Record<string, unknown>,
+): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`API ${path}: ${res.status}`);
+  return res.json() as Promise<T>;
+}
