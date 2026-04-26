@@ -1,35 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { PageTransition } from "./PageTransition";
-import { useAuth } from "./AuthContext";
 import type { ReactNode } from "react";
 
 export function ClientShell({ children }: { children: ReactNode }) {
-  const pathname        = usePathname();
-  const router          = useRouter();
-  const { isAuthenticated } = useAuth();
-
-  const isLoginPage = pathname === "/";
-
-  // Redirect to login whenever not authenticated and not already there
-  useEffect(() => {
-    if (!isAuthenticated && !isLoginPage) {
-      router.replace("/");
-    }
-  }, [isAuthenticated, isLoginPage, router]);
-
-  // While redirecting, render nothing to avoid a flash of protected content
-  if (!isAuthenticated && !isLoginPage) return null;
-
   return (
     <div className="flex h-screen flex-col">
-      {!isLoginPage && <Header />}
+      <Header />
       <div className="flex min-h-0 flex-1">
-        {!isLoginPage && <Sidebar />}
+        <Sidebar />
         <main
           className="min-w-0 flex-1 overflow-auto bg-[#F5F5F5] dark:bg-zinc-950 flex flex-col"
           style={{ scrollbarGutter: "stable" }}
@@ -39,7 +20,7 @@ export function ClientShell({ children }: { children: ReactNode }) {
           </div>
 
           {/* ── Site Footer ───────────────────────────────────────────────── */}
-          {!isLoginPage && <footer className="border-t border-zinc-200 bg-white px-8 py-10 dark:border-zinc-800 dark:bg-zinc-900 font-sans">
+          <footer className="border-t border-zinc-200 bg-white px-8 py-10 dark:border-zinc-800 dark:bg-zinc-900 font-sans">
             <div className="mx-auto max-w-6xl">
 
               {/* Top row: brand + columns */}
@@ -122,7 +103,7 @@ export function ClientShell({ children }: { children: ReactNode }) {
               </div>
 
             </div>
-          </footer>}
+          </footer>
         </main>
       </div>
     </div>
