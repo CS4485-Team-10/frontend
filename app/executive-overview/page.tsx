@@ -53,10 +53,6 @@ function formatClaimStatus(status: string) {
   return status.replace(/_/g, " ");
 }
 
-function isVerifiedClaimStatus(status: string) {
-  const normalized = status.trim().toLowerCase();
-  return normalized === "verified" || normalized === "verified_true";
-}
 
 type MetricKey =
   | "total_videos_scoped"
@@ -242,7 +238,6 @@ export default function ExecutiveOverviewPage() {
   const [data, setData] = useState<ExecutiveOverviewResponse | null>(null);
   const [clusters, setClusters] = useState<TopicCluster[]>([]);
   const [claims, setClaims] = useState<ClaimItem[]>([]);
-  const [allClaims, setAllClaims] = useState<ClaimItem[]>([]);
   const [sentiment, setSentiment] = useState<SentimentShiftResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [claimStatusFilter, setClaimStatusFilter] = useState<"all" | "verified" | "unverifiable">("all");
@@ -252,13 +247,11 @@ export default function ExecutiveOverviewPage() {
     Promise.all([
       apiFetch<ExecutiveOverviewResponse>("/overview/executive"),
       apiFetch<TopicClustersResponse>("/overview/topic-clusters"),
-      apiFetch<ClaimListResponse>("/claims"),
       apiFetch<SentimentShiftResponse>("/overview/sentiment-shift", { range: "30d" }),
     ])
-      .then(([execData, clusterData, allClaimData, sentimentData]) => {
+      .then(([execData, clusterData, sentimentData]) => {
         setData(execData);
         setClusters(clusterData.clusters);
-        setAllClaims(allClaimData.data);
         setSentiment(sentimentData);
       })
       .catch((err) => setError(err instanceof Error ? err.message : String(err)));
