@@ -276,8 +276,6 @@ export default function ExecutiveOverviewPage() {
   if (error) return <div className="p-8 text-red-600 dark:text-red-400">Failed to load: {error}</div>;
   if (!data) return <div className="p-8 text-zinc-500 dark:text-zinc-400">Loading...</div>;
 
-  const verifiedClaimsCount = allClaims.filter((claim) => isVerifiedClaimStatus(claim.status)).length;
-
   const meta = data.overview_metrics_meta;
   const overviewMetrics: OverviewMetricCard[] = [
     {
@@ -297,7 +295,7 @@ export default function ExecutiveOverviewPage() {
     {
       key: "verified_claims",
       title: "Verified Claims",
-      value: verifiedClaimsCount,
+      value: data.verified_claims,
       subLabel: `${meta.verified_claims.accuracy_pct}% ${meta.verified_claims.accuracy_label}`,
       icon: "claims",
     },
