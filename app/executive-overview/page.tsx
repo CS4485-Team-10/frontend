@@ -5,6 +5,8 @@ import Link from "next/link";
 import {
   AreaChart,
   Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   Tooltip,
@@ -16,6 +18,7 @@ import { useTheme } from "@/components/layout/ThemeContext";
 import { apiFetch } from "@/lib/api";
 import type { ExecutiveOverviewResponse, TopicClustersResponse, TopicCluster } from "@/lib/types/executive-overview";
 import type { ClaimListResponse, ClaimItem } from "@/lib/types/claim";
+import type { SentimentShiftResponse } from "@/lib/types/sentiment";
 
 type TopicTrend = Record<string, string | number>;
 
@@ -50,10 +53,6 @@ function formatClaimStatus(status: string) {
   return status.replace(/_/g, " ");
 }
 
-function isVerifiedClaimStatus(status: string) {
-  const normalized = status.trim().toLowerCase();
-  return normalized === "verified" || normalized === "verified_true";
-}
 
 type MetricKey =
   | "total_videos_scoped"
@@ -235,10 +234,11 @@ function BubbleChart({ clusters }: { clusters: TopicCluster[] }) {
 }
 
 export default function ExecutiveOverviewPage() {
+  const { isDark } = useTheme();
   const [data, setData] = useState<ExecutiveOverviewResponse | null>(null);
   const [clusters, setClusters] = useState<TopicCluster[]>([]);
   const [claims, setClaims] = useState<ClaimItem[]>([]);
-  const [allClaims, setAllClaims] = useState<ClaimItem[]>([]);
+  const [sentiment, setSentiment] = useState<SentimentShiftResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [claimStatusFilter, setClaimStatusFilter] = useState<"all" | "verified" | "unverifiable">("all");
   const [claimsLoading, setClaimsLoading] = useState(true);
@@ -247,12 +247,12 @@ export default function ExecutiveOverviewPage() {
     Promise.all([
       apiFetch<ExecutiveOverviewResponse>("/overview/executive"),
       apiFetch<TopicClustersResponse>("/overview/topic-clusters"),
-      apiFetch<ClaimListResponse>("/claims"),
+      apiFetch<SentimentShiftResponse>("/overview/sentiment-shift", { range: "30d" }),
     ])
-      .then(([execData, clusterData, allClaimData]) => {
+      .then(([execData, clusterData, sentimentData]) => {
         setData(execData);
         setClusters(clusterData.clusters);
-        setAllClaims(allClaimData.data);
+        setSentiment(sentimentData);
       })
       .catch((err) => setError(err instanceof Error ? err.message : String(err)));
   }, []);
@@ -276,8 +276,6 @@ export default function ExecutiveOverviewPage() {
   if (error) return <div className="p-8 text-red-600 dark:text-red-400">Failed to load: {error}</div>;
   if (!data) return <div className="p-8 text-zinc-500 dark:text-zinc-400">Loading...</div>;
 
-  const verifiedClaimsCount = allClaims.filter((claim) => isVerifiedClaimStatus(claim.status)).length;
-
   const meta = data.overview_metrics_meta;
   const overviewMetrics: OverviewMetricCard[] = [
     {
@@ -297,7 +295,7 @@ export default function ExecutiveOverviewPage() {
     {
       key: "verified_claims",
       title: "Verified Claims",
-      value: verifiedClaimsCount,
+      value: data.verified_claims,
       subLabel: `${meta.verified_claims.accuracy_pct}% ${meta.verified_claims.accuracy_label}`,
       icon: "claims",
     },
@@ -456,12 +454,56 @@ export default function ExecutiveOverviewPage() {
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white p-6 shadow-[0_1px_0_rgba(0,0,0,0.04)] dark:border-zinc-700 dark:bg-zinc-800">
+        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_0_rgba(0,0,0,0.04)] dark:border-zinc-700 dark:bg-zinc-800">
           <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Sentiment Analysis</h3>
-          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">Health domain overview</p>
-          <div className="mt-8 text-center">
-            <p className="text-sm text-zinc-400 dark:text-zinc-500">Sentiment analysis endpoint coming soon.</p>
-            <p className="mt-1 text-xs text-zinc-300 dark:text-zinc-600">See docs/MISSING_APIS.md for details.</p>
+          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">Last 30 days · health domain</p>
+          {sentiment && (
+            <div className="mt-3 flex gap-3 text-xs text-zinc-500 dark:text-zinc-400">
+              <span className="flex items-center gap-1">
+                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+                {sentiment.totals.positive} positive
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="inline-block h-2 w-2 rounded-full bg-zinc-400" />
+                {sentiment.totals.neutral} neutral
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
+                {sentiment.totals.negative} negative
+              </span>
+            </div>
+          )}
+          <div className="mt-3 h-[200px]">
+            {!sentiment ? (
+              <div className="flex h-full items-center justify-center text-sm text-zinc-400 dark:text-zinc-500">
+                Loading…
+              </div>
+            ) : sentiment.buckets.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-zinc-400 dark:text-zinc-500">
+                No sentiment data available.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={sentiment.buckets} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#374151" : "#e5e7eb"} />
+                  <XAxis dataKey="date" tick={{ fill: isDark ? "#9ca3af" : "#6b7280", fontSize: 10 }} tickLine={false} axisLine={false} />
+                  <YAxis tick={{ fill: isDark ? "#9ca3af" : "#6b7280", fontSize: 10 }} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: isDark ? "#1f2937" : "#ffffff",
+                      border: `1px solid ${isDark ? "#374151" : "#e5e7eb"}`,
+                      borderRadius: 8,
+                      color: isDark ? "#f4f4f5" : "#18181b",
+                      fontSize: 12,
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11, color: isDark ? "#9ca3af" : "#6b7280" }} />
+                  <Bar dataKey="positive" stackId="s" fill="#10b981" name="Positive" />
+                  <Bar dataKey="neutral" stackId="s" fill="#9ca3af" name="Neutral" />
+                  <Bar dataKey="negative" stackId="s" fill="#ef4444" name="Negative" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
       </section>

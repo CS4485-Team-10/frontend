@@ -41,7 +41,6 @@ export default function TrendAnalyticsPage() {
   const [error, setError] = useState<string | null>(null);
   const [range, setRange] = useState("6m");
   const [sentimentData, setSentimentData] = useState<SentimentShiftResponse | null>(null);
-  const [sentimentLoading, setSentimentLoading] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -57,11 +56,9 @@ export default function TrendAnalyticsPage() {
   }, []);
 
   useEffect(() => {
-    setSentimentLoading(true);
     apiFetch<SentimentShiftResponse>("/overview/sentiment-shift", { range })
       .then((data) => setSentimentData(data))
-      .catch(() => setSentimentData(null))
-      .finally(() => setSentimentLoading(false));
+      .catch(() => setSentimentData(null));
   }, [range]);
 
   const filteredTrends = useMemo(() => {
@@ -178,11 +175,11 @@ export default function TrendAnalyticsPage() {
             </div>
           )}
           <div className="h-60">
-            {sentimentLoading ? (
+            {!sentimentData ? (
               <div className="flex h-full items-center justify-center text-sm text-zinc-400 dark:text-zinc-500">
                 Loading…
               </div>
-            ) : sentimentData && sentimentData.buckets.length > 0 ? (
+            ) : sentimentData.buckets.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={sentimentData.buckets}>
                   <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
