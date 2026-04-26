@@ -53,7 +53,6 @@ function formatClaimStatus(status: string) {
   return status.replace(/_/g, " ");
 }
 
-
 type MetricKey =
   | "total_videos_scoped"
   | "active_narratives"
@@ -384,15 +383,7 @@ export default function ExecutiveOverviewPage() {
                 <option value="verified">Verified</option>
                 <option value="unverifiable">Unverifiable</option>
               </select>
-              <Link
-                href="/claim-validation"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-3.5" aria-hidden>
-                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-                </svg>
-                Export
-              </Link>
+              {/* Export button removed from here */}
             </div>
           </div>
 
