@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AreaChart,
   Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   Tooltip,
@@ -15,6 +17,7 @@ import { useTheme } from "@/components/layout/ThemeContext";
 import { apiFetch } from "@/lib/api";
 import type { ExecutiveOverviewResponse } from "@/lib/types/executive-overview";
 import type { NarrativeListResponse, NarrativeItem } from "@/lib/types/narrative";
+import type { SentimentShiftResponse } from "@/lib/types/sentiment";
 
 type TopicTrend = Record<string, string | number>;
 
@@ -37,6 +40,8 @@ export default function TrendAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [range, setRange] = useState("6m");
+  const [sentimentData, setSentimentData] = useState<SentimentShiftResponse | null>(null);
+  const [sentimentLoading, setSentimentLoading] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -50,6 +55,14 @@ export default function TrendAnalyticsPage() {
       .catch((err) => setError(err instanceof Error ? err.message : String(err)))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    setSentimentLoading(true);
+    apiFetch<SentimentShiftResponse>("/overview/sentiment-shift", { range })
+      .then((data) => setSentimentData(data))
+      .catch(() => setSentimentData(null))
+      .finally(() => setSentimentLoading(false));
+  }, [range]);
 
   const filteredTrends = useMemo(() => {
     if (!execData) return [];
@@ -146,10 +159,56 @@ export default function TrendAnalyticsPage() {
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-800">
-          <h3 className="mb-2 font-medium text-zinc-900 dark:text-zinc-100">Sentiment Shift</h3>
-          <p className="text-sm text-zinc-400 dark:text-zinc-500">Sentiment analysis endpoint coming soon.</p>
-          <p className="mt-1 text-xs text-zinc-300 dark:text-zinc-600">See docs/MISSING_APIS.md for details.</p>
+        <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-800">
+          <h3 className="mb-1 font-medium text-zinc-900 dark:text-zinc-100">Sentiment Shift</h3>
+          {sentimentData && (
+            <div className="mb-3 flex gap-4 text-xs text-zinc-500 dark:text-zinc-400">
+              <span className="flex items-center gap-1">
+                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+                Positive {sentimentData.totals.positive}
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="inline-block h-2 w-2 rounded-full bg-zinc-400" />
+                Neutral {sentimentData.totals.neutral}
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
+                Negative {sentimentData.totals.negative}
+              </span>
+            </div>
+          )}
+          <div className="h-60">
+            {sentimentLoading ? (
+              <div className="flex h-full items-center justify-center text-sm text-zinc-400 dark:text-zinc-500">
+                Loading…
+              </div>
+            ) : sentimentData && sentimentData.buckets.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={sentimentData.buckets}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                  <XAxis dataKey="date" tick={{ fill: axisTick, fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <YAxis tick={{ fill: axisTick, fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: tooltipBg,
+                      border: `1px solid ${tooltipBorder}`,
+                      borderRadius: 8,
+                      color: tooltipText,
+                      fontSize: 12,
+                    }}
+                  />
+                  <Legend wrapperStyle={{ color: axisTick, fontSize: 12 }} />
+                  <Bar dataKey="positive" stackId="s" fill="#10b981" name="Positive" />
+                  <Bar dataKey="neutral" stackId="s" fill="#9ca3af" name="Neutral" />
+                  <Bar dataKey="negative" stackId="s" fill="#ef4444" name="Negative" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-zinc-400 dark:text-zinc-500">
+                No sentiment data for this range.
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
