@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { PageTransition } from "./PageTransition";
@@ -22,11 +23,10 @@ export function ClientShell({ children }: { children: ReactNode }) {
           {/* ── Site Footer ───────────────────────────────────────────────── */}
           <footer className="border-t border-zinc-200 bg-white px-8 py-10 dark:border-zinc-800 dark:bg-zinc-900 font-sans">
             <div className="mx-auto max-w-6xl">
-
               {/* Top row: brand + columns */}
               <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
-
-                {/* Brand */}
+                
+                {/* 1. Brand Column */}
                 <div className="lg:col-span-1">
                   <div className="flex items-center gap-2.5">
                     <div className="flex size-8 items-center justify-center rounded-md bg-zinc-900 dark:bg-zinc-700">
@@ -45,44 +45,29 @@ export function ClientShell({ children }: { children: ReactNode }) {
                   </p>
                 </div>
 
-                {/* Contact */}
+                {/* 2. Contact Column */}
                 <div>
                   <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Contact</h4>
                   <ul className="space-y-2 text-xs text-zinc-600 dark:text-zinc-400">
-                    <li className="flex items-center gap-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-3.5 shrink-0 text-zinc-400" aria-hidden>
-                        <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
-                      </svg>
-                      team10@utdallas.edu
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-3.5 shrink-0 text-zinc-400" aria-hidden>
-                        <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/>
-                      </svg>
-                      +1 (972) 111-1111
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-3.5 shrink-0 text-zinc-400" aria-hidden>
-                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                      </svg>
-                      800 W Campbell Rd, Richardson, TX 75080
-                    </li>
+                    <li>team10@utdallas.edu</li>
+                    <li>+1 (972) 111-1111</li>
+                    <li>800 W Campbell Rd, Richardson, TX 75080</li>
                   </ul>
                 </div>
 
-                {/* Platform */}
+                {/* 3. Platform Column (With working Links) */}
                 <div>
                   <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Platform</h4>
                   <ul className="space-y-2 text-xs text-zinc-600 dark:text-zinc-400">
-                    <li>Executive Overview</li>
-                    <li>Narrative Discovery</li>
-                    <li>Claim Validation</li>
-                    <li>Trend Analytics</li>
-                    <li>Creator Risk Monitor</li>
+                    <li><Link href="/executive-overview" className="hover:underline">Executive Overview</Link></li>
+                    <li><Link href="/narrative-discovery" className="hover:underline">Narrative Discovery</Link></li>
+                    <li><Link href="/claim-validation" className="hover:underline">Claim Validation</Link></li>
+                    <li><Link href="/trend-analytics" className="hover:underline">Trend Analytics</Link></li>
+                    <li><Link href="/creator-risk-monitor" className="hover:underline">Creator Risk Monitor</Link></li>
                   </ul>
                 </div>
 
-                {/* Project */}
+                {/* 4. Project Column */}
                 <div>
                   <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Project</h4>
                   <ul className="space-y-2 text-xs text-zinc-600 dark:text-zinc-400">
@@ -92,16 +77,14 @@ export function ClientShell({ children }: { children: ReactNode }) {
                     <li>Team 10</li>
                   </ul>
                 </div>
-
               </div>
 
-              {/* Divider + bottom bar */}
+              {/* Bottom bar */}
               <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-zinc-100 pt-6 dark:border-zinc-800 sm:flex-row">
                 <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
                   © 2026 YouTube Intelligence · CS 4485 Senior Design · UT Dallas
                 </p>
               </div>
-
             </div>
           </footer>
         </main>
