@@ -174,23 +174,16 @@ export function Header() {
 
               <div className="py-1">
                 <button
-                  onClick={() => { setIsProfileOpen(false); router.push('/profile'); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors dark:text-zinc-300 dark:hover:bg-zinc-800"
-                >
-                  <User className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-                  Account Information
-                </button>
-
-                <button
+                  type="button"
                   onClick={() => { setIsProfileOpen(false); router.push('/alerts-settings'); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors dark:text-zinc-300 dark:hover:bg-zinc-800"
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800"
                 >
-                  <Settings className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                  <Settings className="size-4 shrink-0 text-zinc-500 dark:text-zinc-400" />
                   System Settings
                 </button>
               </div>
 
-              <div className="h-px bg-zinc-100 mx-2 dark:bg-zinc-700" />
+              <div className="mx-2 h-px bg-zinc-100 dark:bg-zinc-700" />
 
               <div className="py-1">
                 <button
