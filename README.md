@@ -1,52 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# YouTube Intelligence Platform — Frontend
 
-## Development Setup
+Frontend for the **YouTube Intelligence Platform**: a dashboard that surfaces narratives, claims, trends, and creator risk around YouTube content, backed by the platform API. The app provides a shell with navigation, theming, and in-app notifications across the main workflows below.
 
-```bash
-# Configure git hooks
-bash scripts/setup-hooks.sh
-```
+## Installation & Setup
 
-Or manually:
+**Stack:** [Next.js](https://nextjs.org) (App Router), React 19, TypeScript, [Tailwind CSS](https://tailwindcss.com) v4, [Recharts](https://recharts.org) for charts, and [Lucide](https://lucide.dev) for icons.
 
-```bash
-git config core.hooksPath .githooks
-chmod +x .githooks/pre-commit
-```
+1. **Dependencies**
+  ```bash
+   npm install
+  ```
+2. **Backend API**
+  UI calls `NEXT_PUBLIC_BACKEND` (defaults to `http://localhost:8000`). Configure it in your .env, if set elsewhere.
+3. **Git Hooks**
+  ```bash
+   bash scripts/setup-hooks.sh
+  ```
+   Or manually:
+   Pre-commit runs ESLint, TypeScript (`tsc --noEmit`), and `next build`.
+4. **Development Server**
+  ```bash
+   npm run dev
+  ```
+   Open [http://localhost:3000](http://localhost:3000) — the root route redirects to **Executive Overview**.
 
-The pre-commit hook checks: **ESLint** (linting), **TypeScript** (type checking), **Next.js build** (build verification).
+**Other scripts:** `npm run build`, `npm run start`, `npm run lint`, `npm run typecheck`.
 
-## Getting Started
+## Main Features
 
-First, run the development server:
+- **Executive overview** — High-level KPIs, topic trends, clusters, and recent claims in one view so you can see overall scope, activity, and verification status at a glance.
+- **Narrative discovery** — Browse and search detected narratives, sort by momentum or risk, and open details or hand off context to other areas of the app.
+- **Claim validation** — Review extracted claims with verification status (verified, disputed, under review, etc.), summary stats, search, and filters.
+- **Trend analytics** — Charts for topic momentum and sentiment shifts over selectable time ranges, tied to overview and narrative data.
+- **Creator risk monitor** — Rank and search creators by risk score, flagged claims, and reach to focus on higher-impact channels.
+- **Alerts & settings** — View risk-tiered alerts, tweak notification-related preferences, and jump from alerts into related narratives where supported.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Deployment
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+This frontend is deployed on **[Vercel](https://vercel.com)** (Next.js-native hosting). Configure production `NEXT_PUBLIC_BACKEND` and any other environment variables in the Vercel project settings to point at your deployed API.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Acknowledgements & Artifacts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Developed for the CS4485 Senior Design Project course at UT Dallas under the mentorship of Dr. Selim Sarac. 
 
-## Learn More
+**Team**: Bhavesh Mandalapu, Advay Chandramouli, Anish Kothuri, Pranav Pillai, Praneet Komandur, Pratyush Niraula
 
-To learn more about Next.js, take a look at the following resources:
+**Project Artifacts**:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [Final Report](https://docs.google.com/document/d/1io4LL0g5Zvy8MGH4SOAGt4XD8-wFtW3L18-DAp_ljHg/edit?tab=t.0)
+- [Final Project Presentation](https://canva.link/stort89tnhxjsmp)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
