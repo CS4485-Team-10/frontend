@@ -28,25 +28,31 @@ Frontend for the **YouTube Intelligence Platform**: a dashboard that surfaces na
 
 ## Main Features
 
-- **Executive overview** — High-level KPIs, topic trends, clusters, and recent claims in one view so you can see overall scope, activity, and verification status at a glance.
-- **Narrative discovery** — Browse and search detected narratives, sort by momentum or risk, and open details or hand off context to other areas of the app.
-- **Claim validation** — Review extracted claims with verification status (verified, disputed, under review, etc.), summary stats, search, and filters.
-- **Trend analytics** — Charts for topic momentum and sentiment shifts over selectable time ranges, tied to overview and narrative data.
-- **Creator risk monitor** — Rank and search creators by risk score, flagged claims, and reach to focus on higher-impact channels.
-- **Alerts & settings** — View risk-tiered alerts, tweak notification-related preferences, and jump from alerts into related narratives where supported.
+- **Executive Overview** — High-level KPIs, topic trends, clusters, and recent claims in one view so you can see overall scope, activity, and verification status at a glance.
+- **Narrative Discovery** — Browse and search detected narratives, sort by momentum or risk, and open details or hand off context to other areas of the app.
+- **Claim Validation** — Review extracted claims with verification status (verified, disputed, under review, etc.), summary stats, search, and filters.
+- **Trend Analytics** — Charts for topic momentum and sentiment shifts over selectable time ranges, tied to overview and narrative data.
+- **Creator Risk Monitor** — Rank and search creators by risk score, flagged claims, and reach to focus on higher-impact channels.
+- **Alerts & Settings** — View risk-tiered alerts, tweak notification-related preferences, and jump from alerts into related narratives where supported.
 
-## Deployment
+## Developer Notes
+
+### Deployment
 
 This frontend is deployed on **[Vercel](https://vercel.com)** (Next.js-native hosting). Configure production `NEXT_PUBLIC_BACKEND` and any other environment variables in the Vercel project settings to point at your deployed API.
 
+### Related Repositories
+
+- [YouTube Intelligence Platform — Backend](https://github.com/CS4485-Team-10/backend)
+
 ## Acknowledgements & Artifacts
 
-Developed for the CS4485 Senior Design Project course at UT Dallas under the mentorship of Dr. Selim Sarac. 
+Developed for the CS4485 Senior Design course at UT Dallas under the mentorship of Dr. Selim Sarac. 
 
 **Team**: Bhavesh Mandalapu, Advay Chandramouli, Anish Kothuri, Pranav Pillai, Praneet Komandur, Pratyush Niraula
 
 **Project Artifacts**:
 
-- [Final Report](https://docs.google.com/document/d/1io4LL0g5Zvy8MGH4SOAGt4XD8-wFtW3L18-DAp_ljHg/edit?tab=t.0)
+- [Final Technical Report](https://docs.google.com/document/d/1io4LL0g5Zvy8MGH4SOAGt4XD8-wFtW3L18-DAp_ljHg/edit?tab=t.0)
 - [Final Project Presentation](https://canva.link/stort89tnhxjsmp)
 
